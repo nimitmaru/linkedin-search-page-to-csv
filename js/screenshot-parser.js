@@ -102,12 +102,20 @@ function extractFromScreenshotPattern() {
           }
         }
         
+        // Look for profile image
+        let imageUrl = '';
+        const imgElement = profileContainer.querySelector('img');
+        if (imgElement && imgElement.src) {
+          imageUrl = imgElement.src;
+        }
+        
         // If we found valid data, add to profiles
         if (name && canonicalURL && !profiles.some(p => p.url === canonicalURL)) {
           profiles.push({
             name,
             url: canonicalURL,
-            title
+            title,
+            imageUrl
           });
         }
       } catch (e) {

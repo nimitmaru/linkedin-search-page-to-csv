@@ -11,6 +11,31 @@ document.addEventListener('DOMContentLoaded', function() {
   
   let extractedData = [];
   let selectedProfiles = new Set();
+  let storedProfiles = [];
+  let isAppendMode = true;
+  
+  // Load previously stored data on popup open
+  function loadStoredProfiles() {
+    chrome.storage.local.get(['linkedInProfiles', 'appendMode'], function(result) {
+      if (result.linkedInProfiles) {
+        storedProfiles = result.linkedInProfiles;
+        
+        // Update append mode checkbox if available
+        if (typeof result.appendMode !== 'undefined') {
+          isAppendMode = result.appendMode;
+          const appendCheckbox = document.getElementById('append-mode');
+          if (appendCheckbox) {
+            appendCheckbox.checked = isAppendMode;
+          }
+        }
+        
+        // Update status to show stored profiles
+        if (storedProfiles.length > 0) {
+          statusDiv.textContent = `${storedProfiles.length} profiles in memory from previous pages`;
+        }
+      }
+    });
+  }
   
   // Function to extract data from LinkedIn
   function extractLinkedInData() {
@@ -43,7 +68,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (response && response.data && response.data.length > 0) {
           extractedData = response.data;
-          statusDiv.textContent = `Found ${extractedData.length} profiles`;
+          
+          // Handle pagination info if available
+          if (response.pagination) {
+            const { currentPage, totalPages } = response.pagination;
+            
+            // Update status text with pagination info
+            statusDiv.textContent = `Found ${extractedData.length} profiles (Page ${currentPage} of ${totalPages})`;
+            
+            // If in append mode and we have stored profiles, combine them
+            if (isAppendMode && storedProfiles.length > 0) {
+              const combinedProfiles = combineProfiles(storedProfiles, extractedData);
+              statusDiv.textContent += ` | Total: ${combinedProfiles.length} profiles`;
+            }
+          } else {
+            statusDiv.textContent = `Found ${extractedData.length} profiles`;
+          }
           
           // Reset selection state
           selectedProfiles.clear();
@@ -72,11 +112,114 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Function to combine profiles from multiple pages with duplicate detection
+  function combineProfiles(existingProfiles, newProfiles) {
+    if (!existingProfiles || existingProfiles.length === 0) {
+      return newProfiles;
+    }
+    
+    // Create a Set of URLs to avoid duplicates
+    const existingUrls = new Set(existingProfiles.map(profile => profile.url));
+    
+    // Add only profiles that we don't already have
+    const uniqueNewProfiles = newProfiles.filter(profile => !existingUrls.has(profile.url));
+    
+    // Return combined array
+    return [...existingProfiles, ...uniqueNewProfiles];
+  }
+  
+  // Function to save extracted profiles to storage
+  function saveProfilesToStorage() {
+    if (!extractedData || extractedData.length === 0) return;
+    
+    let profilesToSave = extractedData;
+    
+    // If in append mode, combine with existing profiles
+    if (isAppendMode && storedProfiles.length > 0) {
+      profilesToSave = combineProfiles(storedProfiles, extractedData);
+    }
+    
+    // Track the selected profiles and add a selected: true property to them
+    const selectedProfilesData = getSelectedProfilesData();
+    
+    // Mark profiles as selected
+    profilesToSave = profilesToSave.map(profile => {
+      // Check if this profile is selected
+      const isSelected = selectedProfilesData.some(selectedProfile => 
+        selectedProfile.url === profile.url
+      );
+      
+      return {
+        ...profile,
+        selected: isSelected
+      };
+    });
+    
+    // Save to storage
+    chrome.storage.local.set({
+      linkedInProfiles: profilesToSave,
+      appendMode: isAppendMode
+    }, function() {
+      console.log('Profiles saved to storage:', profilesToSave.length);
+      storedProfiles = profilesToSave;
+    });
+  }
+  
+  // Function to clear stored profiles
+  function clearStoredProfiles() {
+    chrome.storage.local.remove(['linkedInProfiles'], function() {
+      storedProfiles = [];
+      showToast('Stored profiles cleared');
+      statusDiv.textContent = 'All stored profiles have been cleared';
+    });
+  }
+
   // Extract data automatically when popup opens
+  loadStoredProfiles();
   extractLinkedInData();
   
   // Handler for refresh button
   refreshButton.addEventListener('click', extractLinkedInData);
+  
+  // Create a clear button to remove all stored profiles
+  const clearButton = document.createElement('button');
+  clearButton.id = 'clear-data';
+  clearButton.textContent = 'Clear Stored Data';
+  clearButton.classList.add('secondary-button');
+  clearButton.addEventListener('click', clearStoredProfiles);
+  
+  // Create an append mode checkbox
+  const appendModeContainer = document.createElement('div');
+  appendModeContainer.className = 'option-container';
+  
+  const appendCheckbox = document.createElement('input');
+  appendCheckbox.type = 'checkbox';
+  appendCheckbox.id = 'append-mode';
+  appendCheckbox.checked = isAppendMode;
+  
+  const appendLabel = document.createElement('label');
+  appendLabel.htmlFor = 'append-mode';
+  appendLabel.textContent = 'Append Mode (Combine data across pages)';
+  
+  appendModeContainer.appendChild(appendCheckbox);
+  appendModeContainer.appendChild(appendLabel);
+  
+  // Add the new elements to the page
+  const optionsContainer = document.querySelector('.options-container') || document.body;
+  optionsContainer.appendChild(appendModeContainer);
+  optionsContainer.appendChild(clearButton);
+  
+  // Handler for append mode checkbox
+  appendCheckbox.addEventListener('change', function() {
+    isAppendMode = this.checked;
+    chrome.storage.local.set({ appendMode: isAppendMode });
+    
+    if (isAppendMode && storedProfiles.length > 0) {
+      showToast(`Append mode enabled (${storedProfiles.length} stored profiles)`);
+    } else if (!isAppendMode) {
+      showToast('Append mode disabled');
+    }
+  });
   
   // Handler for select all checkbox
   selectAllCheckbox.addEventListener('change', function() {
@@ -113,6 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Handler for export button
   exportButton.addEventListener('click', function() {
+    // Save to storage before exporting
+    saveProfilesToStorage();
     const selectedData = getSelectedProfilesData();
     
     if (selectedData.length === 0) {
@@ -167,23 +312,102 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let html = '';
     
-    // Display all results with checkboxes
-    data.forEach((profile, index) => {
-      const profileId = `profile-${index}`;
-      
+    // If in append mode, show stored profiles + current profiles
+    const displayData = isAppendMode && storedProfiles.length > 0 ? 
+      combineProfiles(storedProfiles, data) : data;
+    
+    // Show a summary at the top if we have combined data
+    if (isAppendMode && storedProfiles.length > 0 && data.length > 0) {
       html += `
-      <div class="profile-item">
-        <div class="checkbox-container">
-          <input type="checkbox" id="${profileId}" class="profile-checkbox" data-id="${profileId}">
-        </div>
-        <div class="profile-info">
-          <div class="profile-name">${escapeHtml(profile.name)}</div>
-          <div class="profile-title">${escapeHtml(profile.title)}</div>
-          <a href="${profile.url}" class="profile-url" target="_blank" title="${escapeHtml(profile.url)}">${escapeHtml(profile.url)}</a>
+      <div class="summary-banner">
+        <div class="summary-text">
+          Showing ${displayData.length} total profiles (${data.length} from current page + ${storedProfiles.length} from previous pages)
         </div>
       </div>
       `;
-    });
+    }
+    
+    // Separate current and stored profiles
+    const currentPageProfiles = data;
+    const storedOnlyProfiles = isAppendMode ? 
+      displayData.filter(p => !currentPageProfiles.some(cp => cp.url === p.url)) : [];
+    
+    // Display current page profiles first
+    if (currentPageProfiles.length > 0) {
+      html += `
+        <div class="section-header">
+          <h3>Current Page Profiles</h3>
+        </div>
+      `;
+      
+      currentPageProfiles.forEach((profile, index) => {
+        const profileId = `profile-current-${index}`;
+        // Check if this profile exists in stored profiles and has selected status
+        const storedVersion = storedProfiles.find(p => p.url === profile.url);
+        const isSelected = profile.selected || (storedVersion && storedVersion.selected);
+        
+        // Extract image URL from profile if available
+        const imageUrl = profile.imageUrl || '/icons/icon48.png'; // Default image as fallback
+        
+        html += `
+        <div class="profile-item">
+          <div class="checkbox-container">
+            <input type="checkbox" id="${profileId}" class="profile-checkbox" data-id="${profileId}" data-url="${profile.url}" ${isSelected ? 'checked' : ''}>
+          </div>
+          <div class="profile-image">
+            <img src="${imageUrl}" alt="${escapeHtml(profile.name)}" class="profile-avatar">
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">${escapeHtml(profile.name)}</div>
+            <div class="profile-title">${escapeHtml(profile.title)}</div>
+            <a href="${profile.url}" class="profile-url" target="_blank" title="${escapeHtml(profile.url)}">${escapeHtml(profile.url)}</a>
+          </div>
+        </div>
+        `;
+      });
+    }
+    
+    // Display stored profiles in a collapsible section
+    if (storedOnlyProfiles.length > 0) {
+      html += `
+        <div class="stored-section">
+          <div class="section-header collapsible" id="stored-profiles-header">
+            <h3>Previously Stored Profiles (${storedOnlyProfiles.length})</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="stored-profiles-container collapsed" id="stored-profiles-container">
+      `;
+      
+      storedOnlyProfiles.forEach((profile, index) => {
+        const profileId = `profile-stored-${index}`;
+        const isSelected = profile.selected;
+        
+        // Extract image URL from profile if available
+        const imageUrl = profile.imageUrl || '/icons/icon48.png'; // Default image as fallback
+        
+        html += `
+        <div class="profile-item stored-profile">
+          <div class="checkbox-container">
+            <input type="checkbox" id="${profileId}" class="profile-checkbox" data-id="${profileId}" data-url="${profile.url}" ${isSelected ? 'checked' : ''}>
+          </div>
+          <div class="profile-image">
+            <img src="${imageUrl}" alt="${escapeHtml(profile.name)}" class="profile-avatar">
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">${escapeHtml(profile.name)}</div>
+            <div class="profile-title">${escapeHtml(profile.title)}</div>
+            <a href="${profile.url}" class="profile-url" target="_blank" title="${escapeHtml(profile.url)}">${escapeHtml(profile.url)}</a>
+            <div class="stored-badge">Previously stored</div>
+          </div>
+        </div>
+        `;
+      });
+      
+      html += `
+          </div>
+        </div>
+      `;
+    }
     
     resultsDiv.innerHTML = html;
     
@@ -191,6 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.profile-checkbox').forEach(checkbox => {
       checkbox.addEventListener('change', function() {
         const profileId = this.getAttribute('data-id');
+        const profileUrl = this.getAttribute('data-url');
         
         if (this.checked) {
           selectedProfiles.add(profileId);
@@ -201,24 +426,84 @@ document.addEventListener('DOMContentLoaded', function() {
           selectAllCheckbox.checked = false;
         }
         
+        // Mark profile as selected/unselected in the data
+        const allProfiles = combineProfiles(storedProfiles, extractedData);
+        const profileToUpdate = allProfiles.find(p => p.url === profileUrl);
+        if (profileToUpdate) {
+          profileToUpdate.selected = this.checked;
+        }
+        
+        // Save the selection status immediately
+        saveProfilesToStorage();
+        
         updateExportButtonsState();
       });
     });
+    
+    // Add event listener for collapsible section
+    const storedHeader = document.getElementById('stored-profiles-header');
+    const storedContainer = document.getElementById('stored-profiles-container');
+    
+    if (storedHeader && storedContainer) {
+      storedHeader.addEventListener('click', function() {
+        storedContainer.classList.toggle('collapsed');
+        const collapseIcon = this.querySelector('.collapse-icon');
+        if (collapseIcon) {
+          collapseIcon.textContent = storedContainer.classList.contains('collapsed') ? '▼' : '▲';
+        }
+      });
+    }
+    
+    // If we've combined profiles, save them
+    if (isAppendMode && storedProfiles.length > 0 && data.length > 0) {
+      saveProfilesToStorage();
+    }
   }
   
   // Get the data for selected profiles
   function getSelectedProfilesData() {
-    if (selectedProfiles.size === 0) return [];
+    if (selectedProfiles.size === 0) {
+      // Check if any profiles are marked as selected in the data
+      const dataSource = isAppendMode && storedProfiles.length > 0 ? 
+        combineProfiles(storedProfiles, extractedData) : extractedData;
+      
+      const selectedData = dataSource.filter(profile => profile.selected);
+      if (selectedData.length > 0) {
+        return selectedData;
+      }
+      
+      return [];
+    }
     
-    return extractedData.filter((_, index) => {
-      const profileId = `profile-${index}`;
-      return selectedProfiles.has(profileId);
+    // Use combined data if available, otherwise just extracted data
+    const dataSource = isAppendMode && storedProfiles.length > 0 ? 
+      combineProfiles(storedProfiles, extractedData) : extractedData;
+    
+    // Get the URLs of the selected profiles
+    const selectedUrls = new Set();
+    document.querySelectorAll('.profile-checkbox:checked').forEach(checkbox => {
+      const url = checkbox.getAttribute('data-url');
+      if (url) {
+        selectedUrls.add(url);
+      }
     });
+    
+    return dataSource.filter(profile => selectedUrls.has(profile.url));
   }
   
   // Update export buttons state
   function updateExportButtonsState() {
-    const hasSelectedProfiles = selectedProfiles.size > 0;
+    // Check both the selectedProfiles set and profiles with selected: true property
+    let hasSelectedProfiles = selectedProfiles.size > 0;
+    
+    if (!hasSelectedProfiles) {
+      // Check if any profiles are marked as selected in the data
+      const dataSource = isAppendMode && storedProfiles.length > 0 ? 
+        combineProfiles(storedProfiles, extractedData) : extractedData;
+      
+      hasSelectedProfiles = dataSource.some(profile => profile.selected);
+    }
+    
     exportButton.disabled = !hasSelectedProfiles;
     copyButton.disabled = !hasSelectedProfiles;
   }

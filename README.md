@@ -8,6 +8,8 @@ A Chrome extension that extracts contact information from LinkedIn search result
 - Export data to CSV format
 - Simple interface with extract and export buttons
 - Works on LinkedIn search results pages
+- Support for pagination across multiple result pages
+- Save and combine data from multiple pages
 
 ## Installation
 
@@ -26,8 +28,14 @@ A Chrome extension that extracts contact information from LinkedIn search result
 2. Click the LinkedIn Data Extractor extension icon in your browser toolbar
 3. In the popup, click "Extract Data" to pull information from the current search results page
 4. Review the extracted data in the popup
-5. Click "Export to CSV" to download the data as a CSV file
-6. Import the CSV file into Airtable
+5. To collect data from multiple pages:
+   - Ensure "Append Mode" is checked (enabled by default)
+   - Navigate to the next page of LinkedIn search results
+   - Open the extension again to extract and combine with previous data
+   - Repeat for all desired pages
+6. Click "Export to CSV" to download the combined data as a CSV file
+7. Import the CSV file into Airtable
+8. Use "Clear Stored Data" to start a new extraction session
 
 ## Airtable Integration
 
@@ -40,8 +48,8 @@ Future versions will include direct Airtable integration. For now:
 ## Limitations
 
 - Works only on LinkedIn search results pages
-- Currently extracts only visible profiles on the current page (no pagination)
 - LinkedIn may change their page structure, requiring updates to the selectors
+- Manual navigation between pages is required (automatic pagination is not implemented to avoid triggering LinkedIn's anti-scraping measures)
 
 ## Development
 

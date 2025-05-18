@@ -35,12 +35,20 @@ function extractLinkedInDataFromDOM() {
         const titleElement = item.querySelector('div.OxRVYBPaMbQwEfslyYadmBWjwaQuFvi');
         const title = titleElement ? titleElement.textContent.trim() : '';
         
+        // Try to extract profile image if available
+        let imageUrl = '';
+        const imageElement = item.querySelector('img');
+        if (imageElement && imageElement.src) {
+          imageUrl = imageElement.src;
+        }
+        
         // Only add if we have at least the name and URL
         if (name && canonicalURL) {
           profiles.push({
             name,
             url: canonicalURL,
-            title
+            title,
+            imageUrl
           });
         }
       } catch (e) {
@@ -122,12 +130,23 @@ function extractLinkedInDataFromDOM() {
             if (title) break;
           }
           
+          // Try to extract profile image if available
+          let imageUrl = '';
+          const imageElements = item.querySelectorAll('img');
+          for (const img of imageElements) {
+            if (img.src && img.src.includes('profile-displayphoto')) {
+              imageUrl = img.src;
+              break;
+            }
+          }
+          
           // Only add if we haven't already added this profile
           if (name && canonicalURL && !profiles.some(p => p.url === canonicalURL)) {
             profiles.push({
               name,
               url: canonicalURL,
-              title
+              title,
+              imageUrl
             });
           }
         } catch (e) {

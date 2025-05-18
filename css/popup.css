@@ -180,3 +180,138 @@ button:disabled {
 .toast.visible {
   opacity: 1;
 }
+
+/* Pagination styles */
+.summary-banner {
+  background-color: #f1f7fc;
+  border: 1px solid #d0e2f2;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  color: #0077b5;
+  font-size: 13px;
+}
+
+.summary-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stored-profile {
+  background-color: #f8fbff;
+}
+
+.stored-badge {
+  display: inline-block;
+  font-size: 10px;
+  background-color: #e1f5fe;
+  color: #0288d1;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+.option-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 8px;
+  background: #f8f8f8;
+  border-radius: 4px;
+}
+
+.options-container {
+  margin-bottom: 15px;
+}
+
+.secondary-button {
+  background-color: #757575;
+}
+
+.secondary-button:hover {
+  background-color: #616161;
+}
+
+/* Profile image styles */
+.profile-image {
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Updated profile item layout */
+.profile-item {
+  display: flex;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  align-items: flex-start;
+}
+
+/* Collapsible section styles */
+.section-header {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+  font-weight: bold;
+}
+
+.section-header h3 {
+  font-size: 14px;
+  margin: 0;
+  color: #0077b5;
+}
+
+.collapsible {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collapse-icon {
+  font-weight: normal;
+  font-size: 12px;
+  color: #0077b5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.stored-profiles-container {
+  max-height: 500px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease;
+}
+
+.stored-profiles-container.collapsed {
+  max-height: 0;
+  overflow: hidden;
+}
+
+/* Refresh icon */
+#refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+}
+
+#refresh .refresh-icon {
+  width: 18px;
+  height: 18px;
+}

@@ -2,10 +2,137 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "extract") {
     const profileData = extractLinkedInProfiles();
-    sendResponse({data: profileData});
+    const paginationInfo = detectPaginationInfo();
+    sendResponse({
+      data: profileData,
+      pagination: paginationInfo
+    });
   }
   return true; // Keep the message channel open for async response
 });
+
+// Function to detect pagination information
+function detectPaginationInfo() {
+  try {
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    // Method 1: Look for the specific LinkedIn pagination structure from the example
+    // This is the most reliable method based on the HTML structure provided
+    const artdecoPagination = document.querySelector('.artdeco-pagination');
+    if (artdecoPagination) {
+      // LinkedIn has a convenient page state element that shows "Page X of Y"
+      const pageStateElement = artdecoPagination.querySelector('.artdeco-pagination__page-state');
+      if (pageStateElement) {
+        const pageStateText = pageStateElement.textContent.trim();
+        // Extract numbers from text like "Page 1 of 25"
+        const matches = pageStateText.match(/Page\s+(\d+)\s+of\s+(\d+)/i);
+        if (matches && matches.length >= 3) {
+          currentPage = parseInt(matches[1], 10);
+          totalPages = parseInt(matches[2], 10);
+          return { currentPage, totalPages };
+        }
+      }
+      
+      // Method 1b: If page state text not found, look for the active page button
+      const activePage = artdecoPagination.querySelector('.artdeco-pagination__indicator--number.active button, .artdeco-pagination__indicator--number.selected button');
+      if (activePage) {
+        const pageText = activePage.textContent.trim();
+        if (/^\d+$/.test(pageText)) {
+          currentPage = parseInt(pageText, 10);
+        }
+        
+        // Find the highest page number in the pagination
+        const pageButtons = artdecoPagination.querySelectorAll('.artdeco-pagination__indicator--number button');
+        let highestPage = 1;
+        
+        for (const button of pageButtons) {
+          const text = button.textContent.trim();
+          if (/^\d+$/.test(text)) {
+            const pageNum = parseInt(text, 10);
+            if (pageNum > highestPage) {
+              highestPage = pageNum;
+            }
+          }
+        }
+        
+        if (highestPage > 1) {
+          totalPages = highestPage;
+        }
+        
+        return { currentPage, totalPages };
+      }
+      
+      // Method 1c: Look for aria-live element with page information
+      const ariaLiveElement = artdecoPagination.querySelector('[aria-live="polite"]');
+      if (ariaLiveElement) {
+        const ariaText = ariaLiveElement.textContent.trim();
+        const matches = ariaText.match(/Page\s+(\d+)\s+of\s+(\d+)/i);
+        if (matches && matches.length >= 3) {
+          currentPage = parseInt(matches[1], 10);
+          totalPages = parseInt(matches[2], 10);
+          return { currentPage, totalPages };
+        }
+      }
+    }
+    
+    // Method 2: General pagination detection for other pages or if the structure changes
+    const paginationElements = document.querySelectorAll('[class*="pagination"], [class*="page"], ul[aria-label*="pagination"], nav[role="navigation"]');
+    
+    for (const element of paginationElements) {
+      // Skip if we already checked this element
+      if (element === artdecoPagination) continue;
+      
+      // Look for the active/selected page
+      const selectedPageElement = element.querySelector('li.selected, [aria-current="page"], [class*="selected"], [class*="active"]');
+      if (selectedPageElement) {
+        const pageText = selectedPageElement.textContent.trim();
+        if (/^\d+$/.test(pageText)) {
+          currentPage = parseInt(pageText, 10);
+        }
+        
+        // Find all page number elements to determine total pages
+        const pageElements = element.querySelectorAll('li, button, a');
+        let highestPage = 1;
+        
+        for (const pageEl of pageElements) {
+          const text = pageEl.textContent.trim();
+          if (/^\d+$/.test(text)) {
+            const pageNum = parseInt(text, 10);
+            if (pageNum > highestPage) {
+              highestPage = pageNum;
+            }
+          }
+        }
+        
+        if (highestPage > 1) {
+          totalPages = highestPage;
+          break;
+        }
+      }
+    }
+    
+    // Method 3: Alternative detection using URL parameters
+    if (currentPage === 1) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
+      if (pageParam && !isNaN(parseInt(pageParam, 10))) {
+        currentPage = parseInt(pageParam, 10);
+      }
+    }
+    
+    return {
+      currentPage: currentPage,
+      totalPages: totalPages
+    };
+  } catch (error) {
+    console.error("Error detecting pagination:", error);
+    return {
+      currentPage: 1,
+      totalPages: 1
+    };
+  }
+}
 
 // Function to extract LinkedIn profiles from search results
 function extractLinkedInProfiles() {
@@ -131,12 +258,20 @@ function extractProfilesUsingStandardSelectors(profiles) {
           }
         }
         
+        // Try to get profile image
+        let imageUrl = '';
+        const imgElement = card.querySelector('img');
+        if (imgElement && imgElement.src) {
+          imageUrl = imgElement.src;
+        }
+        
         // Add the profile if we have a name and URL
         if (name && canonicalURL && !profiles.some(p => p.url === canonicalURL)) {
           profiles.push({
             name,
             url: canonicalURL,
-            title
+            title,
+            imageUrl
           });
         }
       } catch (e) {
