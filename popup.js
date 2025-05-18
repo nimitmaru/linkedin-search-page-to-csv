@@ -373,7 +373,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="stored-section">
           <div class="section-header collapsible" id="stored-profiles-header">
             <h3>Previously Stored Profiles (${storedOnlyProfiles.length})</h3>
-            <span class="collapse-icon">▼</span>
+            <span class="collapse-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="plus-icon">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </span>
           </div>
           <div class="stored-profiles-container collapsed" id="stored-profiles-container">
       `;
@@ -449,7 +454,21 @@ document.addEventListener('DOMContentLoaded', function() {
         storedContainer.classList.toggle('collapsed');
         const collapseIcon = this.querySelector('.collapse-icon');
         if (collapseIcon) {
-          collapseIcon.textContent = storedContainer.classList.contains('collapsed') ? '▼' : '▲';
+          // Replace the icon based on collapsed state
+          if (storedContainer.classList.contains('collapsed')) {
+            collapseIcon.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="plus-icon">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            `;
+          } else {
+            collapseIcon.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="minus-icon">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            `;
+          }
         }
       });
     }

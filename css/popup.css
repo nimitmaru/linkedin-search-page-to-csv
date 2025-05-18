@@ -286,8 +286,20 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  background-color: rgba(0, 119, 181, 0.1);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.collapse-icon:hover {
+  background-color: rgba(0, 119, 181, 0.2);
+}
+
+.collapse-icon svg {
+  color: #0077b5;
+  stroke: #0077b5;
 }
 
 .stored-profiles-container {
