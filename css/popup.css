@@ -1,0 +1,182 @@
+body {
+  font-family: Arial, sans-serif;
+  width: 450px;
+  padding: 12px;
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #0077b5; /* LinkedIn blue */
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+}
+
+.loading-indicator p {
+  color: #666;
+  margin-top: 15px;
+}
+
+.spinner {
+  border: 3px solid rgba(0, 119, 181, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid #0077b5;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.export-controls {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  padding: 8px 15px;
+  background-color: #0077b5; /* LinkedIn blue */
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button:hover {
+  background-color: #006097;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#status {
+  margin: 10px 0;
+  font-style: italic;
+  color: #555;
+}
+
+.select-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+  padding: 8px;
+  background: #f8f8f8;
+  border-radius: 4px;
+}
+
+.select-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+#results {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.instructions {
+  color: #666;
+  text-align: center;
+  font-style: italic;
+  padding: 20px 0;
+}
+
+.profile-item {
+  display: flex;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  align-items: center;
+}
+
+.profile-item:last-child {
+  border-bottom: none;
+}
+
+.profile-item:hover {
+  background-color: #f5f5f5;
+}
+
+.checkbox-container {
+  margin-right: 12px;
+}
+
+.profile-checkbox {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.profile-title {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 3px;
+}
+
+.profile-url {
+  font-size: 11px;
+  color: #0077b5;
+  text-decoration: none;
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toast {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.toast.visible {
+  opacity: 1;
+}

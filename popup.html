@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LinkedIn Search Extractor</title>
+  <link rel="stylesheet" href="css/popup.css">
+</head>
+<body>
+  <h1>LinkedIn Search Extractor</h1>
+  <div class="controls">
+    <button id="refresh" title="Refresh extraction">↻ Refresh</button>
+    <div class="export-controls">
+      <button id="export" disabled>Export to CSV</button>
+      <button id="copy-clipboard" disabled>Copy to Clipboard</button>
+    </div>
+  </div>
+  
+  <div id="status">Extracting data...</div>
+  
+  <div class="select-controls hidden">
+    <label><input type="checkbox" id="select-all"> Select All</label>
+    <button id="deselect-all">Deselect All</button>
+  </div>
+  
+  <div id="results">
+    <div class="loading-indicator">
+      <div class="spinner"></div>
+      <p>Extracting LinkedIn profiles...</p>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
