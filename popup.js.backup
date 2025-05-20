@@ -317,12 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
             statusDiv.textContent = `Found ${extractedData.length} profiles`;
           }
           
-          // Reset selection state
-          selectedProfiles.clear();
-          
           // Always save profiles to storage right after extraction, regardless of selections
           // This ensures profiles are saved when navigating between pages
-          console.log('extractedData saved right after extraction: ', extractedData)
           saveProfilesToStorage();
           
           // Display extracted data with checkboxes

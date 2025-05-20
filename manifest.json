@@ -20,6 +20,12 @@
       "js": ["js/linkedin-extractor.js", "js/screenshot-parser.js", "js/content.js"]
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["js/*.js"],
+      "matches": ["https://*.linkedin.com/*"]
+    }
+  ],
   "background": {
     "service_worker": "js/background.js"
   },

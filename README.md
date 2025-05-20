@@ -1,13 +1,13 @@
 # LinkedIn Data Extractor Chrome Extension
 
-A Chrome extension that extracts contact information from LinkedIn search results pages and exports data to CSV for Airtable import.
+A Chrome extension that extracts contact information from LinkedIn search results pages, rates contacts by closeness to a VC partner, and exports data to CSV or Airtable.
 
 ## Features
 
-- Extract name, LinkedIn URL, and job title from search results
-- Export data to CSV format
-- Simple interface with extract and export buttons
-- Works on LinkedIn search results pages
+- Extract name, LinkedIn URL, job title, and profile image from search results
+- Rate each contact with a "closeness index" (0-3) indicating likelihood of providing an intro
+- Export data to CSV format or send directly to Airtable API
+- Track VC partner information for intro context
 - Support for pagination across multiple result pages
 - Save and combine data from multiple pages
 
@@ -26,23 +26,38 @@ A Chrome extension that extracts contact information from LinkedIn search result
 
 1. Go to LinkedIn and perform a search for contacts
 2. Click the LinkedIn Data Extractor extension icon in your browser toolbar
-3. In the popup, click "Extract Data" to pull information from the current search results page
-4. Review the extracted data in the popup
-5. To collect data from multiple pages:
+3. The extension automatically extracts information from the current search results page
+4. Click "Select VC Partner" to enter the partner's LinkedIn URL, name and title
+5. Rate each contact using the pill selector to indicate closeness:
+   - **0**: Don't know them at all
+   - **1**: Know them, but unlikely to provide an intro (default)
+   - **2**: Might provide an intro
+   - **3**: Definitely would provide an intro
+6. To collect data from multiple pages:
    - Ensure "Append Mode" is checked (enabled by default)
    - Navigate to the next page of LinkedIn search results
    - Open the extension again to extract and combine with previous data
    - Repeat for all desired pages
-6. Click "Export to CSV" to download the combined data as a CSV file
-7. Import the CSV file into Airtable
-8. Use "Clear Stored Data" to start a new extraction session
+7. Choose your export option:
+   - Click "Export CSV" to download the combined data as a CSV file
+   - Click "Send to Airtable" to send the data directly to the Airtable API
+   - Click "Copy" to copy the data to clipboard in CSV format
+8. Use "Clear This Search" to clear data for current search or "Clear All Searches" to start fresh
 
 ## Airtable Integration
 
-Future versions will include direct Airtable integration. For now:
+The extension supports direct Airtable integration:
 
+1. Enter your VC partner information via the "Select VC Partner" button
+2. Rate each contact using the closeness index pills
+3. Click "Send to Airtable" to export the data directly
+4. The API endpoint receives:
+   - VC partner information (LinkedIn URL, name, title)
+   - Contact data with closeness index for each contact 
+
+Alternatively, you can:
 1. Export data to CSV using the extension
-2. In Airtable, create a table with columns for Name, LinkedIn URL, and Title
+2. In Airtable, create a table with columns for Closeness Index, Name, LinkedIn URL, and Title
 3. Import the CSV file into your Airtable base
 
 ## Limitations
@@ -53,13 +68,31 @@ Future versions will include direct Airtable integration. For now:
 
 ## Development
 
-The extension consists of:
-- `manifest.json`: Extension configuration
-- `popup.html/js/css`: The UI when clicking the extension icon
-- `content.js`: Script that runs on LinkedIn pages to extract data
-- `background.js`: Background service worker script
+### Code Structure
 
-To modify the extraction logic, edit the selectors in `js/content.js`.
+The extension is organized in a modular pattern:
+
+#### JS Modules
+- **js/popup.js**: Main entry point that initializes the UI and sets up event handlers
+- **js/utils.js**: Helper functions like escapeHTML, toast notifications, etc.
+- **js/storage.js**: Chrome storage operations and state management
+- **js/profiles.js**: Profile data management (combining, converting to CSV)
+- **js/ui.js**: UI rendering functions
+- **js/api.js**: API call functions for Airtable export
+- **js/events.js**: Event handlers and UI element creation
+
+#### Content Scripts
+- **js/content.js**: Main content script for LinkedIn page interaction
+- **js/linkedin-extractor.js**: LinkedIn DOM structure extraction
+- **js/screenshot-parser.js**: Pattern-based extraction as fallback
+
+#### Other Files
+- **popup.html**: HTML structure for the extension popup
+- **css/popup.css**: Styling for the popup UI
+- **js/background.js**: Background script for extension initialization
+- **manifest.json**: Extension configuration
+
+To modify the extraction logic, edit the selectors in `js/content.js`, `js/linkedin-extractor.js`, or `js/screenshot-parser.js`.
 
 ## License
 
