@@ -6,18 +6,26 @@ function extractLinkedInDataFromDOM() {
   
   try {
     // Target the list items with the exact class from the example
-    const listItems = document.querySelectorAll('li.qPzubtmjDpkgZkyhqgfOqIsyLvpljOXlLfM');
-    console.log(`Found ${listItems.length} list items with the primary selector`);
+    const listItems = document.querySelectorAll('div[data-view-name="search-entity-result-universal-template"]');
     
     // Process each list item
     listItems.forEach(item => {
       try {
-        // Extract name - found in <span aria-hidden="true"> inside the first link with profile link
-        const nameElement = item.querySelector('span[dir="ltr"] span[aria-hidden="true"]');
-        if (!nameElement) return;
-        
-        const name = nameElement.textContent.trim();
+        let name = '';
+        let imageUrl = '';
+        const imageElement = item.querySelector('img');
+        if (imageElement && imageElement.alt) {
+          name = imageElement.alt;
+        } else {
+          const nameElement = item.querySelector('span[dir="ltr"] span[aria-hidden="true"]');
+          if (!nameElement) return;
+          name = nameElement.textContent.trim();
+        }
         if (!name) return;
+
+        if (imageElement && imageElement.src) {
+          imageUrl = imageElement.src;
+        }
         
         // Extract profile URL - found in <a> tag with href containing "/in/"
         const urlElement = item.querySelector('a[href*="/in/"]');
@@ -32,16 +40,9 @@ function extractLinkedInDataFromDOM() {
         const canonicalURL = `${urlObj.origin}/in/${username}`;
         
         // Extract job title - found in div with specific class
-        const titleElement = item.querySelector('div.OxRVYBPaMbQwEfslyYadmBWjwaQuFvi');
+        const titleElement = item.querySelectorAll('.mb1 > div')[1];
         const title = titleElement ? titleElement.textContent.trim() : '';
-        
-        // Try to extract profile image if available
-        let imageUrl = '';
-        const imageElement = item.querySelector('img');
-        if (imageElement && imageElement.src) {
-          imageUrl = imageElement.src;
-        }
-        
+                
         // Only add if we have at least the name and URL
         if (name && canonicalURL) {
           profiles.push({

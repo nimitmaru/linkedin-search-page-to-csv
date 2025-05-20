@@ -198,6 +198,14 @@ button:disabled {
   justify-content: center;
 }
 
+.search-context {
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-align: center;
+  color: #0077b5;
+  font-size: 14px;
+}
+
 .stored-profile {
   background-color: #f8fbff;
 }
@@ -232,6 +240,20 @@ button:disabled {
 
 .secondary-button:hover {
   background-color: #616161;
+}
+
+.danger-button {
+  background-color: #d32f2f;
+}
+
+.danger-button:hover {
+  background-color: #b71c1c;
+}
+
+.clear-buttons-container {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 /* Profile image styles */

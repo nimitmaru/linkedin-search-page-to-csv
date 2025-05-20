@@ -3,13 +3,123 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "extract") {
     const profileData = extractLinkedInProfiles();
     const paginationInfo = detectPaginationInfo();
+    const searchInfo = extractSearchIdentifiers();
+    
     sendResponse({
       data: profileData,
-      pagination: paginationInfo
+      pagination: paginationInfo,
+      searchInfo: searchInfo
     });
   }
   return true; // Keep the message channel open for async response
 });
+
+// Function to extract search identifiers from the current URL
+function extractSearchIdentifiers() {
+  try {
+    const currentUrl = window.location.href;
+    const url = new URL(currentUrl);
+    
+    // Get the URL path without query parameters
+    // This will be something like /search/results/people/
+    const urlPath = url.pathname;
+    
+    // Determine search type for display
+    let searchType = '';
+    if (urlPath.includes('/people/')) {
+      searchType = 'People';
+    } else if (urlPath.includes('/jobs/')) {
+      searchType = 'Jobs';
+    } else if (urlPath.includes('/companies/')) {
+      searchType = 'Companies';
+    } else if (urlPath.includes('/groups/')) {
+      searchType = 'Groups';
+    } else if (urlPath.includes('/schools/')) {
+      searchType = 'Schools';
+    } else if (urlPath.includes('/events/')) {
+      searchType = 'Events';
+    } else if (urlPath.includes('/content/')) {
+      searchType = 'Content';
+    }
+    
+    // Extract connectionOf or facetConnectionOf parameter
+    const params = url.searchParams;
+    let connectionIdentifier = '';
+    let connectionName = '';
+    
+    // Try to extract the connection name from the UI first
+    // This is more reliable and user-friendly than the ID
+    try {
+      const connectionPill = document.querySelector('[data-basic-filter-parameter-name="connectionOf"] button.artdeco-pill');
+      if (connectionPill) {
+        connectionName = connectionPill.textContent.replace(/\s+/g, ' ').trim();
+      }
+    } catch (e) {
+      console.error("Error extracting connection name from UI:", e);
+    }
+    
+    // Check for connectionOf parameter in URL as fallback
+    if (params.has('connectionOf')) {
+      connectionIdentifier = params.get('connectionOf');
+    } 
+    // Check for facetConnectionOf parameter
+    else if (params.has('facetConnectionOf')) {
+      const facetConnectionOf = params.get('facetConnectionOf');
+      
+      // The facetConnectionOf might be an array in JSON format
+      try {
+        const parsed = JSON.parse(facetConnectionOf);
+        if (Array.isArray(parsed)) {
+          connectionIdentifier = parsed.join('_');
+        } else {
+          connectionIdentifier = facetConnectionOf;
+        }
+      } catch (e) {
+        connectionIdentifier = facetConnectionOf;
+      }
+    }
+    
+    // Create a unique search identifier by combining path and connection identifier
+    // Exclude any page parameter since that's just for pagination
+    let searchId = urlPath;
+    if (connectionIdentifier) {
+      searchId += `_${connectionIdentifier}`;
+    }
+    
+    // Add other important search parameters that define the search (if present)
+    const keywords = params.get('keywords');
+    if (keywords) {
+      searchId += `_kw_${keywords}`;
+    }
+    
+    const geoId = params.get('geoId');
+    if (geoId) {
+      searchId += `_geo_${geoId}`;
+    }
+    
+    // Filter out parameters that change between pages but don't change the search itself
+    // such as 'page', 'sid', etc.
+    
+    return {
+      searchId: searchId,
+      urlPath: urlPath,
+      connectionIdentifier: connectionIdentifier,
+      connectionName: connectionName, // Include the human-readable name
+      searchType: searchType, // Include the search type
+      fullUrl: currentUrl
+    };
+  } catch (error) {
+    console.error("Error extracting search identifiers:", error);
+    return {
+      searchId: window.location.pathname, // Fallback to just the pathname
+      urlPath: window.location.pathname,
+      connectionIdentifier: '',
+      connectionName: '',
+      searchType: '',
+      fullUrl: window.location.href
+    };
+  }
+}
 
 // Function to detect pagination information
 function detectPaginationInfo() {

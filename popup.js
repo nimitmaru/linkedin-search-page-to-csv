@@ -13,12 +13,15 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedProfiles = new Set();
   let storedProfiles = [];
   let isAppendMode = true;
+  let currentSearchId = ''; // Identifier for the current search
+  let allStoredSearches = {}; // Store all searches
   
   // Load previously stored data on popup open
   function loadStoredProfiles() {
-    chrome.storage.local.get(['linkedInProfiles', 'appendMode'], function(result) {
-      if (result.linkedInProfiles) {
-        storedProfiles = result.linkedInProfiles;
+    chrome.storage.local.get(['linkedInSearches', 'appendMode'], function(result) {
+      // Get the current active tab to determine the search ID
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        const activeTab = tabs[0];
         
         // Update append mode checkbox if available
         if (typeof result.appendMode !== 'undefined') {
@@ -29,11 +32,39 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
         
-        // Update status to show stored profiles
-        if (storedProfiles.length > 0) {
-          statusDiv.textContent = `${storedProfiles.length} profiles in memory from previous pages`;
+        // If no searches are stored yet, create an empty object
+        if (!result.linkedInSearches) {
+          allStoredSearches = {};
+          return;
         }
-      }
+        
+        // Store all searches
+        allStoredSearches = result.linkedInSearches;
+        
+        // Execute the content script to get the current search ID
+        chrome.tabs.sendMessage(activeTab.id, {action: "extract"}, function(response) {
+          if (chrome.runtime.lastError || !response || !response.searchInfo) {
+            console.error("Error getting search info:", chrome.runtime.lastError);
+            return;
+          }
+          
+          // Set the current search ID
+          currentSearchId = response.searchInfo.searchId;
+          
+          // Load profiles specific to this search
+          if (allStoredSearches[currentSearchId]) {
+            storedProfiles = allStoredSearches[currentSearchId].profiles || [];
+            
+            // Update status to show stored profiles for this search
+            if (storedProfiles.length > 0) {
+              statusDiv.textContent = `${storedProfiles.length} profiles in memory from previous pages of this search`;
+            }
+          } else {
+            // No stored profiles for this search
+            storedProfiles = [];
+          }
+        });
+      });
     });
   }
   
@@ -69,6 +100,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (response && response.data && response.data.length > 0) {
           extractedData = response.data;
           
+          // Capture search information
+          if (response.searchInfo) {
+            currentSearchId = response.searchInfo.searchId;
+            
+            // If this is a new search we haven't seen before
+            if (!allStoredSearches[currentSearchId]) {
+              allStoredSearches[currentSearchId] = {
+                profiles: [],
+                searchPath: response.searchInfo.urlPath,
+                connectionIdentifier: response.searchInfo.connectionIdentifier,
+                connectionName: response.searchInfo.connectionName,
+                searchType: response.searchInfo.searchType,
+                lastAccessed: new Date().toISOString()
+              };
+            }
+            
+            // If we're on a new search, but not in append mode, clear any previously stored profiles
+            // for this specific search (we'll continue appending to profiles from the same search)
+            if (!isAppendMode) {
+              storedProfiles = [];
+            } else {
+              // In append mode, make sure we're using profiles from the current search
+              storedProfiles = allStoredSearches[currentSearchId].profiles || [];
+            }
+          }
+          
           // Handle pagination info if available
           if (response.pagination) {
             const { currentPage, totalPages } = response.pagination;
@@ -76,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update status text with pagination info
             statusDiv.textContent = `Found ${extractedData.length} profiles (Page ${currentPage} of ${totalPages})`;
             
-            // If in append mode and we have stored profiles, combine them
+            // If in append mode and we have stored profiles for this search, combine them
             if (isAppendMode && storedProfiles.length > 0) {
               const combinedProfiles = combineProfiles(storedProfiles, extractedData);
               statusDiv.textContent += ` | Total: ${combinedProfiles.length} profiles`;
@@ -130,11 +187,11 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Function to save extracted profiles to storage
   function saveProfilesToStorage() {
-    if (!extractedData || extractedData.length === 0) return;
+    if (!extractedData || extractedData.length === 0 || !currentSearchId) return;
     
     let profilesToSave = extractedData;
     
-    // If in append mode, combine with existing profiles
+    // If in append mode, combine with existing profiles for this search
     if (isAppendMode && storedProfiles.length > 0) {
       profilesToSave = combineProfiles(storedProfiles, extractedData);
     }
@@ -155,22 +212,53 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     });
     
-    // Save to storage
+    // Update the profiles for this specific search
+    allStoredSearches[currentSearchId] = {
+      ...allStoredSearches[currentSearchId],
+      profiles: profilesToSave,
+      lastAccessed: new Date().toISOString()
+    };
+    
+    // Save all searches to storage
     chrome.storage.local.set({
-      linkedInProfiles: profilesToSave,
+      linkedInSearches: allStoredSearches,
       appendMode: isAppendMode
     }, function() {
-      console.log('Profiles saved to storage:', profilesToSave.length);
+      console.log(`Saved ${profilesToSave.length} profiles for search ${currentSearchId}`);
       storedProfiles = profilesToSave;
     });
   }
   
   // Function to clear stored profiles
   function clearStoredProfiles() {
-    chrome.storage.local.remove(['linkedInProfiles'], function() {
+    if (currentSearchId && allStoredSearches[currentSearchId]) {
+      // Clear only profiles for the current search
+      allStoredSearches[currentSearchId].profiles = [];
+      
+      // Save the updated searches
+      chrome.storage.local.set({ linkedInSearches: allStoredSearches }, function() {
+        storedProfiles = [];
+        showToast('Stored profiles for this search cleared');
+        statusDiv.textContent = 'All stored profiles for this search have been cleared';
+      });
+    } else {
+      // Clear all stored profiles for all searches
+      chrome.storage.local.remove(['linkedInSearches'], function() {
+        allStoredSearches = {};
+        storedProfiles = [];
+        showToast('All stored profiles cleared');
+        statusDiv.textContent = 'All stored profiles for all searches have been cleared';
+      });
+    }
+  }
+  
+  // Function to clear ALL stored profiles (across all searches)
+  function clearAllStoredProfiles() {
+    chrome.storage.local.remove(['linkedInSearches'], function() {
+      allStoredSearches = {};
       storedProfiles = [];
-      showToast('Stored profiles cleared');
-      statusDiv.textContent = 'All stored profiles have been cleared';
+      showToast('All stored profiles cleared');
+      statusDiv.textContent = 'All stored profiles for all searches have been cleared';
     });
   }
 
@@ -181,12 +269,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // Handler for refresh button
   refreshButton.addEventListener('click', extractLinkedInData);
   
-  // Create a clear button to remove all stored profiles
+  // Create a clear button to remove stored profiles from current search
   const clearButton = document.createElement('button');
   clearButton.id = 'clear-data';
-  clearButton.textContent = 'Clear Stored Data';
+  clearButton.textContent = 'Clear This Search';
   clearButton.classList.add('secondary-button');
   clearButton.addEventListener('click', clearStoredProfiles);
+  
+  // Create a clear all button to remove profiles from all searches
+  const clearAllButton = document.createElement('button');
+  clearAllButton.id = 'clear-all-data';
+  clearAllButton.textContent = 'Clear All Searches';
+  clearAllButton.classList.add('secondary-button', 'danger-button');
+  clearAllButton.addEventListener('click', clearAllStoredProfiles);
   
   // Create an append mode checkbox
   const appendModeContainer = document.createElement('div');
@@ -207,7 +302,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add the new elements to the page
   const optionsContainer = document.querySelector('.options-container') || document.body;
   optionsContainer.appendChild(appendModeContainer);
-  optionsContainer.appendChild(clearButton);
+  
+  // Create a button container for our clear buttons
+  const clearButtonsContainer = document.createElement('div');
+  clearButtonsContainer.className = 'clear-buttons-container';
+  clearButtonsContainer.appendChild(clearButton);
+  clearButtonsContainer.appendChild(clearAllButton);
+  
+  optionsContainer.appendChild(clearButtonsContainer);
   
   // Handler for append mode checkbox
   appendCheckbox.addEventListener('change', function() {
@@ -316,12 +418,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const displayData = isAppendMode && storedProfiles.length > 0 ? 
       combineProfiles(storedProfiles, data) : data;
     
-    // Show a summary at the top if we have combined data
-    if (isAppendMode && storedProfiles.length > 0 && data.length > 0) {
+    // Show a summary at the top with search context and combined data info
+    if (currentSearchId) {
+      let summaryText = '';
+      
+      // Format the search name for display - use the human-readable connection name if available
+      let searchDisplayName = 'Current search';
+      if (allStoredSearches[currentSearchId]) {
+        const searchData = allStoredSearches[currentSearchId];
+        
+        // Build the display name based on available information
+        if (searchData.connectionName) {
+          // This is a "Connections of X" search with a proper name
+          searchDisplayName = searchData.connectionName;
+        } else if (searchData.connectionIdentifier) {
+          // Fallback to the identifier if name is not available
+          searchDisplayName = `Connections of ${searchData.connectionIdentifier.split('_')[0]}`;
+        } else if (searchData.searchType) {
+          // This is a general search
+          searchDisplayName = `${searchData.searchType} Search`;
+          
+          // Try to extract keyword if available
+          if (currentSearchId.includes('_kw_')) {
+            const keyword = currentSearchId.split('_kw_')[1].split('_')[0];
+            if (keyword) {
+              searchDisplayName += `: "${decodeURIComponent(keyword)}"`;
+            }
+          }
+        }
+      }
+      
+      if (isAppendMode && storedProfiles.length > 0 && data.length > 0) {
+        summaryText = `Showing ${displayData.length} total profiles (${data.length} from current page + ${storedProfiles.length} from previous pages)`;
+      } else {
+        summaryText = `Showing ${data.length} profiles from current page`;
+      }
+      
       html += `
       <div class="summary-banner">
+        <div class="search-context">Mutual Contacts of ${searchDisplayName}</div>
         <div class="summary-text">
-          Showing ${displayData.length} total profiles (${data.length} from current page + ${storedProfiles.length} from previous pages)
+          ${summaryText}
         </div>
       </div>
       `;
