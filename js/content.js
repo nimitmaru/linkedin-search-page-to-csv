@@ -61,6 +61,17 @@ function extractSearchIdentifiers() {
     // Check for connectionOf parameter in URL as fallback
     if (params.has('connectionOf')) {
       connectionIdentifier = params.get('connectionOf');
+      
+      // Normalize the connectionIdentifier - handle both string and array formats
+      try {
+        // If it's already a JSON string (like ["ID"]), parse it and get first element
+        const parsed = JSON.parse(connectionIdentifier);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          connectionIdentifier = parsed[0];
+        }
+      } catch (e) {
+        // It's already a plain string, which is what we want
+      }
     } 
     // Check for facetConnectionOf parameter
     else if (params.has('facetConnectionOf')) {
@@ -69,8 +80,9 @@ function extractSearchIdentifiers() {
       // The facetConnectionOf might be an array in JSON format
       try {
         const parsed = JSON.parse(facetConnectionOf);
-        if (Array.isArray(parsed)) {
-          connectionIdentifier = parsed.join('_');
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Use just the first ID to normalize format
+          connectionIdentifier = parsed[0];
         } else {
           connectionIdentifier = facetConnectionOf;
         }
@@ -79,26 +91,31 @@ function extractSearchIdentifiers() {
       }
     }
     
-    // Create a unique search identifier by combining path and connection identifier
-    // Exclude any page parameter since that's just for pagination
+    // Final normalization - ensure we always use a string representation
+    // This prevents ["ID"] and "ID" from creating different search IDs
+    if (connectionIdentifier) {
+      // If still a complex object/array by this point, stringify it
+      if (typeof connectionIdentifier !== 'string') {
+        connectionIdentifier = JSON.stringify(connectionIdentifier);
+      }
+      
+      // Remove any square brackets if they were added during string conversion
+      connectionIdentifier = connectionIdentifier.replace(/^\[|\]$/g, '').replace(/^"|"$/g, '');
+    }
+    
+    // Create a unique search identifier by combining path and connection identifier only
+    // This simplified approach focuses only on the connection relationship
     let searchId = urlPath;
     if (connectionIdentifier) {
       searchId += `_${connectionIdentifier}`;
+      console.log(`Search ID created with connectionIdentifier: ${connectionIdentifier}`);
+    } else {
+      console.log(`Search ID created with no connectionIdentifier`);
     }
     
-    // Add other important search parameters that define the search (if present)
-    const keywords = params.get('keywords');
-    if (keywords) {
-      searchId += `_kw_${keywords}`;
-    }
-    
-    const geoId = params.get('geoId');
-    if (geoId) {
-      searchId += `_geo_${geoId}`;
-    }
-    
-    // Filter out parameters that change between pages but don't change the search itself
-    // such as 'page', 'sid', etc.
+    // We're intentionally not including keywords, geoId, or other search parameters
+    // to simplify the search ID and group related searches together
+    console.log(`Final search ID: ${searchId}`);
     
     return {
       searchId: searchId,
