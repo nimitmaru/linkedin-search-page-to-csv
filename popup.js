@@ -2,19 +2,26 @@
 document.addEventListener('DOMContentLoaded', function() {
   const refreshButton = document.getElementById('refresh');
   const exportButton = document.getElementById('export');
+  const exportApiButton = document.getElementById('export-api');
   const copyButton = document.getElementById('copy-clipboard');
-  const selectAllCheckbox = document.getElementById('select-all');
-  const deselectAllButton = document.getElementById('deselect-all');
-  const selectControls = document.querySelector('.select-controls');
   const statusDiv = document.getElementById('status');
   const resultsDiv = document.getElementById('results');
+  const selectPartnerButton = document.getElementById('select-partner');
+  const partnerNameDiv = document.getElementById('partner-name');
+  const partnerInfoContainer = document.getElementById('partner-info-container');
   
   let extractedData = [];
-  let selectedProfiles = new Set();
   let storedProfiles = [];
   let isAppendMode = true;
   let currentSearchId = ''; // Identifier for the current search
   let allStoredSearches = {}; // Store all searches
+  
+  // Partner information object
+  let partnerInfo = {
+    linkedInURL: '',
+    fullName: '',
+    title: ''
+  };
   
   /**
    * Normalizes and migrates any existing search data
@@ -437,21 +444,32 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`saveProfilesToStorage: After combining, we have ${profilesToSave.length} profiles`);
     }
     
-    // Get current UI checkbox state
+    // We no longer use checkboxes, but for backward compatibility
     const selectedUrls = new Set();
-    document.querySelectorAll('.profile-checkbox:checked').forEach(checkbox => {
-      const url = checkbox.getAttribute('data-url');
-      if (url) {
-        selectedUrls.add(url);
+    console.log(`saveProfilesToStorage: No longer using checkboxes for selection`);
+    
+    // Check for closeness index values from pill selectors
+    const closenessValues = new Map();
+    document.querySelectorAll('.pill-selector').forEach(pill => {
+      const url = pill.getAttribute('data-url');
+      const value = parseInt(pill.getAttribute('data-value'));
+      if (url && !isNaN(value)) {
+        closenessValues.set(url, value);
       }
     });
-    console.log(`saveProfilesToStorage: Found ${selectedUrls.size} checked checkboxes`);
     
-    // Update the selection state in the profiles
+    // Update the profiles with closeness index and selection state
     profilesToSave = profilesToSave.map(profile => {
+      // Get closeness index from UI if available, otherwise preserve existing value
+      const closenessIndex = closenessValues.has(profile.url) ? 
+                           closenessValues.get(profile.url) : 
+                           (profile.closenessIndex !== undefined ? profile.closenessIndex : 1);
+      
       return {
         ...profile,
-        // Use the checkbox state to determine selection
+        // Use the pill value to determine closeness index
+        closenessIndex: closenessIndex,
+        // Compatibility with old data model
         selected: selectedUrls.has(profile.url)
       };
     });
@@ -527,12 +545,166 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Function to prompt for VC partner information
+  function promptForPartnerInfo() {
+    // Use a simple JS prompt to get the VC partner's LinkedIn URL
+    const url = prompt("Enter the VC partner's LinkedIn URL:", partnerInfo.linkedInURL || "");
+    
+    if (url) {
+      partnerInfo.linkedInURL = url;
+      
+      // Extract name from the URL if possible
+      const urlParts = url.split('/');
+      const potentialName = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+      
+      if (potentialName && potentialName !== 'in') {
+        // Try to format the name from URL (e.g., john-doe to John Doe)
+        const formattedName = potentialName
+          .split('-')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+          
+        // Use prompt to allow editing the auto-extracted name
+        const name = prompt("VC partner's full name:", formattedName);
+        if (name) {
+          partnerInfo.fullName = name;
+        }
+        
+        // Get the VC partner's title (optional)
+        const title = prompt("VC partner's title (optional):", partnerInfo.title || "");
+        if (title) {
+          partnerInfo.title = title;
+        }
+      } else {
+        // If name couldn't be extracted from URL, prompt for it
+        const name = prompt("VC partner's full name:", partnerInfo.fullName || "");
+        if (name) {
+          partnerInfo.fullName = name;
+        }
+        
+        // Get the VC partner's title (optional)
+        const title = prompt("VC partner's title (optional):", partnerInfo.title || "");
+        if (title) {
+          partnerInfo.title = title;
+        }
+      }
+      
+      // Update the UI
+      updatePartnerInfoDisplay();
+      
+      // Save partner info to storage
+      savePartnerInfoToStorage();
+      
+      // Update export button state
+      updateExportButtonsState();
+    }
+  }
+  
+  // Function to update the partner info display
+  function updatePartnerInfoDisplay() {
+    if (partnerInfo.linkedInURL) {
+      partnerNameDiv.textContent = partnerInfo.fullName || "VC Partner";
+      partnerInfoContainer.classList.remove('hidden');
+    } else {
+      partnerNameDiv.textContent = "No VC Partner Selected";
+      partnerInfoContainer.classList.add('hidden');
+    }
+  }
+  
+  // Function to save partner info to storage
+  function savePartnerInfoToStorage() {
+    chrome.storage.local.set({ 'partnerInfo': partnerInfo });
+  }
+  
+  // Function to load partner info from storage
+  function loadPartnerInfoFromStorage() {
+    chrome.storage.local.get('partnerInfo', function(result) {
+      if (result.partnerInfo) {
+        partnerInfo = result.partnerInfo;
+        updatePartnerInfoDisplay();
+        updateExportButtonsState();
+      }
+    });
+  }
+  
   // Extract data automatically when popup opens
   loadStoredProfiles();
+  loadPartnerInfoFromStorage();
   extractLinkedInData();
   
   // Handler for refresh button
   refreshButton.addEventListener('click', extractLinkedInData);
+  
+  // Handler for select partner button
+  selectPartnerButton.addEventListener('click', promptForPartnerInfo);
+  
+  // Function to export data to API
+  function exportDataToAPI() {
+    // First check if partner info is available
+    if (!partnerInfo.linkedInURL) {
+      showToast('Please select a VC partner first');
+      promptForPartnerInfo();
+      return;
+    }
+    
+    // Get all profiles
+    const allProfiles = getAllProfilesForCurrentSearch();
+    
+    if (allProfiles.length === 0) {
+      showToast('No profiles found to export');
+      return;
+    }
+    
+    // Prepare data for API
+    const apiData = {
+      partnerInfo: {
+        linkedInURL: partnerInfo.linkedInURL,
+        fullName: partnerInfo.fullName || '',
+        title: partnerInfo.title || ''
+      },
+      contacts: allProfiles.map(profile => ({
+        fullName: profile.name || '',
+        linkedInURL: profile.url || '',
+        title: profile.title || '',
+        closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
+      }))
+    };
+    
+    // Show loading state
+    exportApiButton.disabled = true;
+    exportApiButton.textContent = 'Sending...';
+    
+    // Make API call
+    fetch('https://flywithkite.com/api/exportToAirtable', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(apiData)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      showToast('Data exported successfully!');
+      console.log('API response:', data);
+    })
+    .catch(error => {
+      showToast(`Failed to export data: ${error.message}`);
+      console.error('API error:', error);
+    })
+    .finally(() => {
+      // Restore button state
+      exportApiButton.disabled = false;
+      exportApiButton.textContent = 'Send to Airtable';
+    });
+  }
+  
+  // Handler for API export button
+  exportApiButton.addEventListener('click', exportDataToAPI);
   
   // Create a clear button to remove stored profiles from current search
   const clearButton = document.createElement('button');
@@ -588,38 +760,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Handler for select all checkbox
-  selectAllCheckbox.addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.profile-checkbox');
-    const isChecked = this.checked;
-    
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = isChecked;
-      
-      const profileId = checkbox.getAttribute('data-id');
-      if (isChecked) {
-        selectedProfiles.add(profileId);
-      } else {
-        selectedProfiles.delete(profileId);
-      }
-    });
-    
-    updateExportButtonsState();
-  });
-  
-  // Handler for deselect all button
-  deselectAllButton.addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('.profile-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = false;
-    });
-    
-    selectAllCheckbox.checked = false;
-    selectedProfiles.clear();
-    
-    updateExportButtonsState();
-  });
+  // We've replaced the checkbox selection with pill selectors,
+  // so these handlers are no longer needed
   
   /**
    * Handles the export button click event
@@ -637,8 +779,14 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Convert data to CSV, including selection status
-    const csvContent = convertToCSV(allProfiles);
+    // Ensure closeness index is properly set for all profiles
+    const profilesWithCloseness = allProfiles.map(profile => ({
+      ...profile,
+      closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
+    }));
+    
+    // Convert data to CSV, including closeness index
+    const csvContent = convertToCSV(profilesWithCloseness);
     
     // Create a download
     const blob = new Blob([csvContent], {type: 'text/csv'});
@@ -667,8 +815,14 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Convert data to CSV, including selection status
-    const csvContent = convertToCSV(allProfiles);
+    // Ensure closeness index is properly set for all profiles
+    const profilesWithCloseness = allProfiles.map(profile => ({
+      ...profile,
+      closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
+    }));
+    
+    // Convert data to CSV, including closeness index
+    const csvContent = convertToCSV(profilesWithCloseness);
     
     // Copy to clipboard
     navigator.clipboard.writeText(csvContent).then(function() {
@@ -749,6 +903,9 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
       </div>
       `;
+      
+      // Show VC partner information
+      partnerInfoContainer.classList.remove('hidden');
     }
     
     // Separate current and stored profiles
@@ -766,17 +923,19 @@ document.addEventListener('DOMContentLoaded', function() {
       
       currentPageProfiles.forEach((profile, index) => {
         const profileId = `profile-current-${index}`;
-        // Check if this profile exists in stored profiles and has selected status
+        // Check if this profile exists in stored profiles
         const storedVersion = storedProfiles.find(p => p.url === profile.url);
-        const isSelected = profile.selected || (storedVersion && storedVersion.selected);
+        // Get closeness index, default to 1
+        const closenessIndex = profile.closenessIndex !== undefined ? profile.closenessIndex : 
+                              (storedVersion && storedVersion.closenessIndex !== undefined ? storedVersion.closenessIndex : 1);
         
         // Extract image URL from profile if available
         const imageUrl = profile.imageUrl || '/icons/icon48.png'; // Default image as fallback
         
         html += `
         <div class="profile-item">
-          <div class="checkbox-container">
-            <input type="checkbox" id="${profileId}" class="profile-checkbox" data-id="${profileId}" data-url="${profile.url}" ${isSelected ? 'checked' : ''}>
+          <div class="profile-actions">
+            <div class="pill-selector pill-value-${closenessIndex}" data-url="${profile.url}" data-value="${closenessIndex}"></div>
           </div>
           <div class="profile-image">
             <img src="${imageUrl}" alt="${escapeHtml(profile.name)}" class="profile-avatar">
@@ -809,15 +968,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
       storedOnlyProfiles.forEach((profile, index) => {
         const profileId = `profile-stored-${index}`;
-        const isSelected = profile.selected;
+        // Get closeness index, default to 1
+        const closenessIndex = profile.closenessIndex !== undefined ? profile.closenessIndex : 1;
         
         // Extract image URL from profile if available
         const imageUrl = profile.imageUrl || '/icons/icon48.png'; // Default image as fallback
         
         html += `
         <div class="profile-item stored-profile">
-          <div class="checkbox-container">
-            <input type="checkbox" id="${profileId}" class="profile-checkbox" data-id="${profileId}" data-url="${profile.url}" ${isSelected ? 'checked' : ''}>
+          <div class="profile-actions">
+            <div class="pill-selector pill-value-${closenessIndex}" data-url="${profile.url}" data-value="${closenessIndex}"></div>
           </div>
           <div class="profile-image">
             <img src="${imageUrl}" alt="${escapeHtml(profile.name)}" class="profile-avatar">
@@ -840,32 +1000,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     resultsDiv.innerHTML = html;
     
-    // Add event listeners to checkboxes
-    document.querySelectorAll('.profile-checkbox').forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        const profileId = this.getAttribute('data-id');
+    // Add event listeners to pill selectors
+    document.querySelectorAll('.pill-selector').forEach(pill => {
+      pill.addEventListener('click', function() {
         const profileUrl = this.getAttribute('data-url');
+        let currentValue = parseInt(this.getAttribute('data-value'));
         
-        if (this.checked) {
-          selectedProfiles.add(profileId);
-        } else {
-          selectedProfiles.delete(profileId);
-          
-          // Uncheck "Select All" if any individual item is unchecked
-          selectAllCheckbox.checked = false;
-        }
+        // Cycle through values: 0, 1, 2, 3, then back to 0
+        currentValue = (currentValue + 1) % 4;
         
-        // Mark profile as selected/unselected in the data
+        // Update the pill display
+        this.classList.remove('pill-value-0', 'pill-value-1', 'pill-value-2', 'pill-value-3');
+        this.classList.add(`pill-value-${currentValue}`);
+        this.setAttribute('data-value', currentValue);
+        
+        // Update the profile data
         const allProfiles = combineProfiles(storedProfiles, extractedData);
         const profileToUpdate = allProfiles.find(p => p.url === profileUrl);
         if (profileToUpdate) {
-          profileToUpdate.selected = this.checked;
+          profileToUpdate.closenessIndex = currentValue;
         }
         
-        // Save the selection status immediately
+        // Save the updated closeness index
         saveProfilesToStorage();
-        
-        updateExportButtonsState();
       });
     });
     
@@ -903,35 +1060,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Get the data for selected profiles
+  // Get the data for profiles (no longer using selection)
   function getSelectedProfilesData() {
-    if (selectedProfiles.size === 0) {
-      // Check if any profiles are marked as selected in the data
-      const dataSource = isAppendMode && storedProfiles.length > 0 ? 
-        combineProfiles(storedProfiles, extractedData) : extractedData;
-      
-      const selectedData = dataSource.filter(profile => profile.selected);
-      if (selectedData.length > 0) {
-        return selectedData;
-      }
-      
-      return [];
-    }
-    
-    // Use combined data if available, otherwise just extracted data
-    const dataSource = isAppendMode && storedProfiles.length > 0 ? 
-      combineProfiles(storedProfiles, extractedData) : extractedData;
-    
-    // Get the URLs of the selected profiles
-    const selectedUrls = new Set();
-    document.querySelectorAll('.profile-checkbox:checked').forEach(checkbox => {
-      const url = checkbox.getAttribute('data-url');
-      if (url) {
-        selectedUrls.add(url);
-      }
-    });
-    
-    return dataSource.filter(profile => selectedUrls.has(profile.url));
+    // Simply return all profiles now that we're using closeness index instead of selection
+    return getAllProfilesForCurrentSearch();
   }
   
   /**
@@ -948,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enable export buttons if there are any profiles
     exportButton.disabled = !hasProfiles;
     copyButton.disabled = !hasProfiles;
+    exportApiButton.disabled = !hasProfiles || !partnerInfo.linkedInURL;
   }
   
   /**
@@ -979,10 +1112,10 @@ document.addEventListener('DOMContentLoaded', function() {
    * @return {string} CSV formatted data
    */
   function convertToCSV(data) {
-    const headers = ['Selected', 'Name', 'LinkedIn URL', 'Title'];
+    const headers = ['Closeness Index', 'Name', 'LinkedIn URL', 'Title'];
     const rows = data.map(row => [
-      // Include selection status as 'Yes'/'No'
-      `"${row.selected ? 'Yes' : 'No'}"`,
+      // Include closeness index (default to 1 if not set)
+      `"${row.closenessIndex !== undefined ? row.closenessIndex : 1}"`,
       `"${(row.name || '').replace(/"/g, '""')}"`,
       `"${(row.url || '').replace(/"/g, '""')}"`,
       `"${(row.title || '').replace(/"/g, '""')}"`

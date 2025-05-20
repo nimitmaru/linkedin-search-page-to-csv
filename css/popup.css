@@ -1,14 +1,38 @@
 body {
   font-family: Arial, sans-serif;
   width: 450px;
-  padding: 12px;
+  padding: 0;
   margin: 0;
+}
+
+/* Header styles */
+.app-header {
+  background-color: #0077b5; /* LinkedIn blue */
+  color: white;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 h1 {
   font-size: 18px;
-  margin-bottom: 15px;
-  color: #0077b5; /* LinkedIn blue */
+  margin: 0;
+  padding: 0;
+  color: white;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0 0 10px 0;
+  color: #0077b5;
+}
+
+h3 {
+  font-size: 14px;
+  margin: 0 0 8px 0;
+  color: #0077b5;
 }
 
 .loading-indicator {
@@ -42,7 +66,6 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
 }
 
 .export-controls {
@@ -51,13 +74,23 @@ h1 {
 }
 
 button {
-  padding: 8px 15px;
+  padding: 8px 12px;
   background-color: #0077b5; /* LinkedIn blue */
   color: white;
   border: none;
   border-radius: 3px;
   cursor: pointer;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.app-header button {
+  background-color: white;
+  color: #0077b5;
+}
+
+.app-header button:hover {
+  background-color: #f0f0f0;
 }
 
 button:hover {
@@ -71,39 +104,22 @@ button:disabled {
 }
 
 #status {
-  margin: 10px 0;
+  margin: 10px 15px;
   font-style: italic;
   color: #555;
-}
-
-.select-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 10px 0;
-  padding: 8px;
-  background: #f8f8f8;
-  border-radius: 4px;
-}
-
-.select-controls label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  cursor: pointer;
+  font-size: 13px;
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 #results {
-  max-height: 400px;
+  max-height: 450px;
   overflow-y: auto;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
+  border-top: 1px solid #ddd;
+  padding: 0;
+  margin-top: 10px;
 }
 
 .instructions {
@@ -115,7 +131,7 @@ button:disabled {
 
 .profile-item {
   display: flex;
-  padding: 10px;
+  padding: 12px 15px;
   border-bottom: 1px solid #eee;
   align-items: center;
 }
@@ -126,15 +142,6 @@ button:disabled {
 
 .profile-item:hover {
   background-color: #f5f5f5;
-}
-
-.checkbox-container {
-  margin-right: 12px;
-}
-
-.profile-checkbox {
-  transform: scale(1.2);
-  cursor: pointer;
 }
 
 .profile-info {
@@ -187,7 +194,7 @@ button:disabled {
   border: 1px solid #d0e2f2;
   border-radius: 4px;
   padding: 8px 12px;
-  margin-bottom: 12px;
+  margin: 12px 15px;
   color: #0077b5;
   font-size: 13px;
 }
@@ -224,14 +231,15 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 10px 0;
+  margin: 10px 15px;
   padding: 8px;
   background: #f8f8f8;
   border-radius: 4px;
 }
 
 .options-container {
-  margin-bottom: 15px;
+  margin: 0 0 10px 0;
+  padding: 0 15px;
 }
 
 .secondary-button {
@@ -260,7 +268,7 @@ button:disabled {
 .profile-image {
   width: 36px;
   height: 36px;
-  margin-right: 10px;
+  margin-right: 12px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -275,14 +283,14 @@ button:disabled {
 /* Updated profile item layout */
 .profile-item {
   display: flex;
-  padding: 10px;
+  padding: 12px 15px;
   border-bottom: 1px solid #eee;
   align-items: flex-start;
 }
 
 /* Collapsible section styles */
 .section-header {
-  padding: 10px;
+  padding: 10px 15px;
   background-color: #f9f9f9;
   border-bottom: 1px solid #eee;
   font-weight: bold;
@@ -340,12 +348,98 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  width: 36px;
-  height: 36px;
+  padding: 6px;
+  width: 32px;
+  height: 32px;
 }
 
 #refresh .refresh-icon {
   width: 18px;
   height: 18px;
+}
+
+/* Partner info styles */
+.partner-info {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9fcff;
+}
+
+.partner-data {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.partner-name {
+  font-weight: bold;
+  color: #0077b5;
+}
+
+.partner-select-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Pill selector styles */
+.closeness-legend {
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.pill-selector {
+  width: 60px;
+  height: 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  transition: all 0.2s ease;
+}
+
+.profile-actions {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.pill-value-0 {
+  background-color: #cfd8dc; /* Grey-blue */
+  color: #263238;
+}
+
+.pill-value-1 {
+  background-color: #81d4fa; /* Light blue */
+}
+
+.pill-value-2 {
+  background-color: #29b6f6; /* Medium blue */
+}
+
+.pill-value-3 {
+  background-color: #0288d1; /* Dark blue */
+}
+
+.pill-selector::after {
+  content: attr(data-value);
 }
