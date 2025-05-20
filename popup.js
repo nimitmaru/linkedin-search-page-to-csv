@@ -122,6 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
               storedProfiles = [];
             } else {
               // In append mode, make sure we're using profiles from the current search
+              console.log('currentSearchId: ', currentSearchId)
+              console.log('allStoredSearches: ', allStoredSearches)
               storedProfiles = allStoredSearches[currentSearchId].profiles || [];
             }
           }

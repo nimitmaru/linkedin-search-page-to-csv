@@ -13,15 +13,30 @@ function extractLinkedInDataFromDOM() {
       try {
         let name = '';
         let imageUrl = '';
-        const imageElement = item.querySelector('img');
-        if (imageElement && imageElement.alt) {
-          name = imageElement.alt;
-        } else {
-          const nameElement = item.querySelector('span[dir="ltr"] span[aria-hidden="true"]');
-          if (!nameElement) return;
+        // get Name
+        const nameElement = item.querySelector('a > span > span');
+        if (nameElement) {
           name = nameElement.textContent.trim();
+        } 
+
+        if (!name) {
+          const hiddenNameAltElement = item.querySelector('a > span > span.visually-hidden');
+          if (hiddenNameAltElement) {
+            // Extract the full name from the text, e.g. 'View Samuel Ballan's profile' => 'Samuel Ballan'
+            const match = hiddenNameAltElement.textContent.match(/^View (.+?)[’']s profile$/);
+            if (match) {
+              name = match[1];
+            }
+          }
         }
-        if (!name) return;
+
+        const imageElement = item.querySelector('img');
+
+        if (!name) {
+          if (imageElement && imageElement.alt) {
+            name = imageElement.alt;
+          } 
+        }
 
         if (imageElement && imageElement.src) {
           imageUrl = imageElement.src;
@@ -38,11 +53,9 @@ function extractLinkedInDataFromDOM() {
         const pathParts = urlObj.pathname.split('?')[0].split('/');
         const username = pathParts[pathParts.length - 1];
         const canonicalURL = `${urlObj.origin}/in/${username}`;
-        
         // Extract job title - found in div with specific class
         const titleElement = item.querySelectorAll('.mb1 > div')[1];
         const title = titleElement ? titleElement.textContent.trim() : '';
-                
         // Only add if we have at least the name and URL
         if (name && canonicalURL) {
           profiles.push({
@@ -51,7 +64,7 @@ function extractLinkedInDataFromDOM() {
             title,
             imageUrl
           });
-        }
+        } 
       } catch (e) {
         console.error('Error extracting profile data:', e);
       }

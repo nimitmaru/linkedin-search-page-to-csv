@@ -4,7 +4,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     const profileData = extractLinkedInProfiles();
     const paginationInfo = detectPaginationInfo();
     const searchInfo = extractSearchIdentifiers();
-    
+    console.log('profileData: ', profileData)
     sendResponse({
       data: profileData,
       pagination: paginationInfo,
