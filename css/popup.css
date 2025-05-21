@@ -376,9 +376,91 @@ button:disabled {
   color: #0077b5;
 }
 
-.partner-select-btn {
+.partner-fullname {
+  font-weight: bold;
+  color: #0077b5;
+  font-size: 14px;
+}
+
+.partner-details {
+  font-size: 12px;
+  color: #555;
+  margin-top: 4px;
+}
+
+.partner-title {
+  color: #666;
+}
+
+.partner-company {
+  color: #333;
+}
+
+.partner-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.partner-btn {
   padding: 5px 10px;
   font-size: 12px;
+  background-color: #0077b5;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.partner-btn:hover {
+  background-color: #005e93;
+}
+
+.partner-btn.secondary-button {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.partner-btn.secondary-button:hover {
+  background-color: #c0c0c0;
+}
+
+/* Partner form styles */
+.partner-form {
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.partner-form h2 {
+  font-size: 16px;
+  margin: 0 0 15px 0;
+  color: #0077b5;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+  justify-content: flex-end;
 }
 
 /* Pill selector styles */

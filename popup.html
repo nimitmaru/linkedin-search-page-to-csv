@@ -23,12 +23,42 @@
     </div>
   </header>
   
-  <div class="partner-info hidden" id="partner-info-container">
+  <div class="partner-info" id="partner-info-container">
     <h2>VC Partner Information</h2>
     <div class="partner-data">
       <div class="partner-name" id="partner-name">No VC Partner Selected</div>
-      <button id="select-partner" class="partner-select-btn">Select VC Partner</button>
+      <div class="partner-buttons">
+        <button id="add-partner" class="partner-btn">Add</button>
+        <button id="clear-partner" class="partner-btn secondary-button">Clear</button>
+      </div>
     </div>
+  </div>
+  
+  <div class="partner-form hidden" id="partner-form-container">
+    <h2>Add VC Partner</h2>
+    <form id="partner-form">
+      <div class="form-group">
+        <label for="partner-fullname">Full Name</label>
+        <input type="text" id="partner-fullname" required>
+      </div>
+      <div class="form-group">
+        <label for="partner-company">Current Company</label>
+        <input type="text" id="partner-company">
+      </div>
+      <div class="form-group">
+        <label for="partner-title">Current Title</label>
+        <input type="text" id="partner-title">
+      </div>
+      <div class="form-group">
+        <label for="partner-linkedin-url">LinkedIn URL</label>
+        <input type="url" id="partner-linkedin-url">
+      </div>
+      <div class="form-actions">
+        <button type="button" id="scrape-linkedin" class="partner-btn">Scrape from LI Profile</button>
+        <button type="submit" id="save-partner" class="partner-btn">Save</button>
+        <button type="button" id="cancel-partner" class="partner-btn secondary-button">Cancel</button>
+      </div>
+    </form>
   </div>
   
   <div class="options-container">
@@ -36,28 +66,6 @@
   </div>
   
   <div id="status">Extracting data...</div>
-  
-  <div class="closeness-legend">
-    <h3>Closeness Index</h3>
-    <div class="legend-items">
-      <div class="legend-item">
-        <div class="pill-selector pill-value-0"></div>
-        <span>0: Don't know them</span>
-      </div>
-      <div class="legend-item">
-        <div class="pill-selector pill-value-1"></div>
-        <span>1: Know them, unlikely intro</span>
-      </div>
-      <div class="legend-item">
-        <div class="pill-selector pill-value-2"></div>
-        <span>2: Might provide intro</span>
-      </div>
-      <div class="legend-item">
-        <div class="pill-selector pill-value-3"></div>
-        <span>3: Definitely would intro</span>
-      </div>
-    </div>
-  </div>
   
   <div id="results">
     <div class="loading-indicator">

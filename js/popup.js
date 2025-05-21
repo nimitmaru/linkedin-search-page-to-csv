@@ -22,9 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
     onPartnerInfoLoaded: updatePartnerInfoDisplay
   };
   
-  // Load stored data
-  loadStoredProfiles(storageCallbacks);
-  loadPartnerInfoFromStorage(updatePartnerInfoDisplay);
+  // First load the VC partner info to ensure it's available
+  loadPartnerInfoFromStorage(() => {
+    console.log('loadPartnerInfoFromStorage callback');
+    // After partner info is loaded, load the profiles data
+    // This ensures proper sequence and that partner info is available
+    // when processing the search context and profiles
+    loadStoredProfiles(storageCallbacks);
+    
+    // Make sure the UI correctly shows the partner info
+    updatePartnerInfoDisplay();
+  });
   
   // Extract data from LinkedIn
   extractLinkedInData();

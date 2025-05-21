@@ -15,12 +15,39 @@ function updatePartnerInfoDisplay() {
   
   if (!partnerNameDiv || !partnerInfoContainer) return;
   
-  if (state.partnerInfo.linkedInURL) {
-    partnerNameDiv.textContent = state.partnerInfo.fullName || "VC Partner";
+  console.log('Updating VC Partner display with:', state.partnerInfo);
+  
+  if (state.partnerInfo && state.partnerInfo.fullName) {
+    let partnerInfo = `<div class="partner-fullname">${state.partnerInfo.fullName}</div>`;
+    
+    if (state.partnerInfo.title || state.partnerInfo.company) {
+      partnerInfo += `<div class="partner-details">`;
+      
+      if (state.partnerInfo.title) {
+        partnerInfo += `<span class="partner-title">${state.partnerInfo.title}</span>`;
+      }
+      
+      if (state.partnerInfo.title && state.partnerInfo.company) {
+        partnerInfo += ` at `;
+      }
+      
+      if (state.partnerInfo.company) {
+        partnerInfo += `<span class="partner-company">${state.partnerInfo.company}</span>`;
+      }
+      
+      partnerInfo += `</div>`;
+    }
+    
+    partnerNameDiv.innerHTML = partnerInfo;
     partnerInfoContainer.classList.remove('hidden');
+    
+    // Ensure the VC Partner section is visible
+    const partnerFormContainer = document.getElementById('partner-form-container');
+    if (partnerFormContainer) {
+      partnerFormContainer.classList.add('hidden');
+    }
   } else {
     partnerNameDiv.textContent = "No VC Partner Selected";
-    partnerInfoContainer.classList.add('hidden');
   }
 }
 

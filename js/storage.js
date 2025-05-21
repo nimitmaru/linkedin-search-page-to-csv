@@ -15,7 +15,9 @@ const state = {
   partnerInfo: {
     linkedInURL: '',
     fullName: '',
-    title: ''
+    title: '',
+    company: '',
+    isOnLinkedInProfile: false
   }
 };
 
@@ -86,6 +88,25 @@ function loadStoredProfiles(callbacks) {
         // Debug - log the connection name if available
         if (response.searchInfo.connectionName) {
           console.log(`loadStoredProfiles: Connection name: "${response.searchInfo.connectionName}"`);
+          
+          // Check if the connection name matches the stored VC partner name
+          // This helps associate the current search with the correct VC partner
+          if (state.partnerInfo && state.partnerInfo.fullName) {
+            const connectionName = response.searchInfo.connectionName.toLowerCase().trim();
+            const partnerName = state.partnerInfo.fullName.toLowerCase().trim();
+            
+            // Look for a match between connection name and partner name
+            // Using includes instead of exact match to handle partial names
+            if (connectionName.includes(partnerName) || partnerName.includes(connectionName)) {
+              console.log(`Match found between connection name "${connectionName}" and VC partner "${partnerName}"`);
+              // Connection matches our stored VC partner - ensure the UI reflects this
+              if (callbacks.onPartnerInfoLoaded) {
+                callbacks.onPartnerInfoLoaded();
+              }
+            } else {
+              console.log(`No match between connection name "${connectionName}" and VC partner "${partnerName}"`);
+            }
+          }
         }
         
         // Always capture extracted data right away to ensure we don't lose it
@@ -327,8 +348,38 @@ function savePartnerInfoToStorage() {
  */
 function loadPartnerInfoFromStorage(onPartnerInfoLoaded) {
   chrome.storage.local.get('partnerInfo', function(result) {
+    console.log('loadPartnerInfoFromStorage', result);
     if (result.partnerInfo) {
+      // Update state with stored partner info
       state.partnerInfo = result.partnerInfo;
+      console.log('Loaded VC Partner info from storage:', state.partnerInfo);
+      
+      // After partner info is loaded, check if it matches the current search context
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        const activeTab = tabs[0];
+        
+        // If we're on a search page, try to associate with the current context
+        if (activeTab.url.includes('linkedin.com/search/results')) {
+          try {
+            // Extract connection name from URL if possible
+            const url = new URL(activeTab.url);
+            if (url.searchParams.has('connectionOf') || url.searchParams.has('facetConnectionOf')) {
+              // Get connection info from search params, likely need content script to get human name
+              console.log('On a connections search page, will check for VC partner match');
+              // We'll rely on the loadStoredProfiles function to handle this matching
+            }
+          } catch (e) {
+            console.error('Error checking URL for connection context:', e);
+          }
+        }
+        
+        // Call callback regardless
+        if (onPartnerInfoLoaded) {
+          onPartnerInfoLoaded();
+        }
+      });
+    } else {
+      // No stored partner info, but still call the callback
       if (onPartnerInfoLoaded) {
         onPartnerInfoLoaded();
       }

@@ -121,61 +121,161 @@ function extractLinkedInData() {
 }
 
 /**
- * Function to prompt for VC partner information
+ * Function to show the VC partner form
  */
-function promptForPartnerInfo() {
-  // Use a simple JS prompt to get the VC partner's LinkedIn URL
-  const url = prompt("Enter the VC partner's LinkedIn URL:", state.partnerInfo.linkedInURL || "");
+function showPartnerForm() {
+  const partnerInfoContainer = document.getElementById('partner-info-container');
+  const partnerFormContainer = document.getElementById('partner-form-container');
   
-  if (url) {
-    state.partnerInfo.linkedInURL = url;
+  if (partnerInfoContainer && partnerFormContainer) {
+    partnerInfoContainer.classList.add('hidden');
+    partnerFormContainer.classList.remove('hidden');
+  }
+  
+  // Check if we're on a LinkedIn profile page
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    const activeTab = tabs[0];
     
-    // Extract name from the URL if possible
-    const urlParts = url.split('/');
-    const potentialName = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
-    
-    if (potentialName && potentialName !== 'in') {
-      // Try to format the name from URL (e.g., john-doe to John Doe)
-      const formattedName = potentialName
-        .split('-')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-        
-      // Use prompt to allow editing the auto-extracted name
-      const name = prompt("VC partner's full name:", formattedName);
-      if (name) {
-        state.partnerInfo.fullName = name;
+    chrome.tabs.sendMessage(activeTab.id, {action: "checkProfilePage"}, function(response) {
+      if (chrome.runtime.lastError) {
+        console.error("Error checking profile page:", chrome.runtime.lastError);
+        return;
       }
       
-      // Get the VC partner's title (optional)
-      const title = prompt("VC partner's title (optional):", state.partnerInfo.title || "");
-      if (title) {
-        state.partnerInfo.title = title;
+      const scrapeButton = document.getElementById('scrape-linkedin');
+      if (scrapeButton) {
+        // Only enable the scrape button if we're on a LinkedIn profile page
+        if (response && response.isProfilePage) {
+          scrapeButton.disabled = false;
+        } else {
+          scrapeButton.disabled = true;
+        }
       }
-    } else {
-      // If name couldn't be extracted from URL, prompt for it
-      const name = prompt("VC partner's full name:", state.partnerInfo.fullName || "");
-      if (name) {
-        state.partnerInfo.fullName = name;
-      }
-      
-      // Get the VC partner's title (optional)
-      const title = prompt("VC partner's title (optional):", state.partnerInfo.title || "");
-      if (title) {
-        state.partnerInfo.title = title;
-      }
-    }
-    
-    // Update the UI
-    updatePartnerInfoDisplay();
-    
-    // Save partner info to storage
-    import('./storage.js').then(module => {
-      module.savePartnerInfoToStorage();
     });
+  });
+}
+
+/**
+ * Function to clear VC partner information
+ */
+function clearPartnerInfo() {
+  // Clear partner info in state
+  state.partnerInfo = {
+    linkedInURL: '',
+    fullName: '',
+    title: '',
+    company: '',
+    isOnLinkedInProfile: false
+  };
+  
+  // Update the UI
+  updatePartnerInfoDisplay();
+  
+  // Save empty partner info to storage
+  import('./storage.js').then(module => {
+    module.savePartnerInfoToStorage();
+  });
+  
+  // Update export button state
+  updateExportButtonsState();
+}
+
+/**
+ * Function to scrape VC partner information from LinkedIn profile
+ */
+function scrapePartnerFromLinkedIn() {
+  console.log('scrapePartnerFromLinkedIn');
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    const activeTab = tabs[0];
     
-    // Update export button state
-    updateExportButtonsState();
+    chrome.tabs.sendMessage(activeTab.id, {action: "scrapeVCPartner"}, function(response) {
+      if (chrome.runtime.lastError) {
+        console.error("Error scraping VC partner info:", chrome.runtime.lastError);
+        return;
+      }
+      
+      if (response && response.vcPartnerInfo) {
+        const vcPartnerInfo = response.vcPartnerInfo;
+        
+        // Fill the form fields with the scraped information
+        const fullNameInput = document.getElementById('partner-fullname');
+        const companyInput = document.getElementById('partner-company');
+        const titleInput = document.getElementById('partner-title');
+        const linkedInURLInput = document.getElementById('partner-linkedin-url');
+        
+        if (fullNameInput) fullNameInput.value = vcPartnerInfo.fullName || '';
+        if (companyInput) companyInput.value = vcPartnerInfo.company || '';
+        if (titleInput) titleInput.value = vcPartnerInfo.title || '';
+        if (linkedInURLInput) linkedInURLInput.value = vcPartnerInfo.linkedInURL || '';
+      }
+    });
+  });
+}
+
+/**
+ * Function to save VC partner information from the form
+ */
+function savePartnerInfo(event) {
+  event.preventDefault();
+  
+  // Get values from form
+  const fullNameInput = document.getElementById('partner-fullname');
+  const companyInput = document.getElementById('partner-company');
+  const titleInput = document.getElementById('partner-title');
+  const linkedInURLInput = document.getElementById('partner-linkedin-url');
+  
+  // Validate required fields
+  if (fullNameInput && !fullNameInput.value.trim()) {
+    alert('Please enter the VC partner\'s full name.');
+    return;
+  }
+  
+  // Update state with form values
+  state.partnerInfo = {
+    fullName: fullNameInput ? fullNameInput.value.trim() : '',
+    company: companyInput ? companyInput.value.trim() : '',
+    title: titleInput ? titleInput.value.trim() : '',
+    linkedInURL: linkedInURLInput ? linkedInURLInput.value.trim() : '',
+    isOnLinkedInProfile: false
+  };
+  
+  // Hide form and show partner info
+  const partnerInfoContainer = document.getElementById('partner-info-container');
+  const partnerFormContainer = document.getElementById('partner-form-container');
+  
+  if (partnerInfoContainer && partnerFormContainer) {
+    partnerFormContainer.classList.add('hidden');
+    partnerInfoContainer.classList.remove('hidden');
+  }
+  
+  // Update the UI
+  updatePartnerInfoDisplay();
+  
+  // Save partner info to storage
+  import('./storage.js').then(module => {
+    module.savePartnerInfoToStorage();
+  });
+  
+  // Update export button state
+  updateExportButtonsState();
+}
+
+/**
+ * Function to cancel adding a VC partner
+ */
+function cancelPartnerForm() {
+  const partnerInfoContainer = document.getElementById('partner-info-container');
+  const partnerFormContainer = document.getElementById('partner-form-container');
+  
+  if (partnerInfoContainer && partnerFormContainer) {
+    partnerFormContainer.classList.add('hidden');
+    partnerInfoContainer.classList.remove('hidden');
+  }
+  
+  // Reset form fields
+  const partnerForm = document.getElementById('partner-form');
+  if (partnerForm) {
+    partnerForm.reset();
   }
 }
 
@@ -201,8 +301,8 @@ function handleExportCSV() {
       closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
     }));
     
-    // Convert data to CSV, including closeness index
-    const csvContent = convertToCSV(profilesWithCloseness);
+    // Convert data to CSV, including closeness index and VC Partner info
+    const csvContent = convertToCSV(profilesWithCloseness, state.partnerInfo);
     
     // Create a download
     const blob = new Blob([csvContent], {type: 'text/csv'});
@@ -238,8 +338,8 @@ function handleCopyToClipboard() {
       closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
     }));
     
-    // Convert data to CSV, including closeness index
-    const csvContent = convertToCSV(profilesWithCloseness);
+    // Convert data to CSV, including closeness index and VC Partner info
+    const csvContent = convertToCSV(profilesWithCloseness, state.partnerInfo);
     
     // Copy to clipboard
     navigator.clipboard.writeText(csvContent).then(function() {
@@ -260,7 +360,11 @@ function setupEventListeners() {
   const exportButton = document.getElementById('export');
   const exportApiButton = document.getElementById('export-api');
   const copyButton = document.getElementById('copy-clipboard');
-  const selectPartnerButton = document.getElementById('select-partner');
+  const addPartnerButton = document.getElementById('add-partner');
+  const clearPartnerButton = document.getElementById('clear-partner');
+  const scrapeLinkedInButton = document.getElementById('scrape-linkedin');
+  const savePartnerButton = document.getElementById('save-partner');
+  const cancelPartnerButton = document.getElementById('cancel-partner');
   
   // Set up button handlers
   if (refreshButton) {
@@ -279,8 +383,34 @@ function setupEventListeners() {
     copyButton.addEventListener('click', handleCopyToClipboard);
   }
   
-  if (selectPartnerButton) {
-    selectPartnerButton.addEventListener('click', promptForPartnerInfo);
+  // VC Partner buttons
+  if (addPartnerButton) {
+    addPartnerButton.addEventListener('click', showPartnerForm);
+  }
+  
+  if (clearPartnerButton) {
+    clearPartnerButton.addEventListener('click', clearPartnerInfo);
+  }
+  
+  if (scrapeLinkedInButton) {
+    scrapeLinkedInButton.addEventListener('click', scrapePartnerFromLinkedIn);
+  }
+  
+  // Partner form handling
+  const partnerForm = document.getElementById('partner-form');
+  if (partnerForm) {
+    partnerForm.addEventListener('submit', savePartnerInfo);
+  }
+  
+  if (savePartnerButton) {
+    savePartnerButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      savePartnerInfo(event);
+    });
+  }
+  
+  if (cancelPartnerButton) {
+    cancelPartnerButton.addEventListener('click', cancelPartnerForm);
   }
   
   // Create and add UI elements dynamically
@@ -338,13 +468,15 @@ function setupEventListeners() {
     }
   });
   
-  // Add listener for custom event to prompt for partner info
-  document.addEventListener('promptPartnerInfo', promptForPartnerInfo);
 }
 
 // Export event handling functions
 export {
   extractLinkedInData,
-  promptForPartnerInfo,
+  showPartnerForm,
+  clearPartnerInfo,
+  scrapePartnerFromLinkedIn,
+  savePartnerInfo,
+  cancelPartnerForm,
   setupEventListeners
 };

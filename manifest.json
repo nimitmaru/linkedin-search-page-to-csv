@@ -16,7 +16,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.linkedin.com/search/results/*"],
+      "matches": [
+        "https://*.linkedin.com/search/results/*",
+        "https://*.linkedin.com/in/*"
+      ],
       "js": ["js/linkedin-extractor.js", "js/screenshot-parser.js", "js/content.js"]
     }
   ],

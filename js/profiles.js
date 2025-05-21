@@ -77,17 +77,56 @@ function combineProfiles(existingProfiles, newProfiles) {
  * Includes closeness index in the output
  * 
  * @param {Array} data - Array of profile objects to convert
+ * @param {Object} partnerInfo - VC Partner information to include
  * @return {string} CSV formatted data
  */
-function convertToCSV(data) {
+function convertToCSV(data, partnerInfo) {
+  // Include VC Partner info in the headers if available
+  let vcPartnerHeader = '';
+  let vcPartnerValue = '';
+  
+  if (partnerInfo && partnerInfo.fullName) {
+    vcPartnerHeader = 'VC Partner';
+    
+    // Compose the VC Partner value
+    let partnerText = partnerInfo.fullName;
+    
+    if (partnerInfo.title && partnerInfo.company) {
+      partnerText += ` (${partnerInfo.title} at ${partnerInfo.company})`;
+    } else if (partnerInfo.title) {
+      partnerText += ` (${partnerInfo.title})`;
+    } else if (partnerInfo.company) {
+      partnerText += ` (${partnerInfo.company})`;
+    }
+    
+    vcPartnerValue = `"${partnerText.replace(/"/g, '""')}"`;
+  }
+  
+  // Base headers
   const headers = ['Closeness Index', 'Name', 'LinkedIn URL', 'Title'];
-  const rows = data.map(row => [
-    // Include closeness index (default to 1 if not set)
-    `"${row.closenessIndex !== undefined ? row.closenessIndex : 1}"`,
-    `"${(row.name || '').replace(/"/g, '""')}"`,
-    `"${(row.url || '').replace(/"/g, '""')}"`,
-    `"${(row.title || '').replace(/"/g, '""')}"`
-  ]);
+  
+  // Add VC Partner to headers if available
+  if (vcPartnerHeader) {
+    headers.push(vcPartnerHeader);
+  }
+  
+  // Create rows with VC Partner value
+  const rows = data.map(row => {
+    const baseRow = [
+      // Include closeness index (default to 1 if not set)
+      `"${row.closenessIndex !== undefined ? row.closenessIndex : 1}"`,
+      `"${(row.name || '').replace(/"/g, '""')}"`,
+      `"${(row.url || '').replace(/"/g, '""')}"`,
+      `"${(row.title || '').replace(/"/g, '""')}"`
+    ];
+    
+    // Add VC Partner value to each row if available
+    if (vcPartnerValue) {
+      baseRow.push(vcPartnerValue);
+    }
+    
+    return baseRow;
+  });
   
   return [
     headers.join(','),

@@ -10,6 +10,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       pagination: paginationInfo,
       searchInfo: searchInfo
     });
+  } else if (request.action === "checkProfilePage") {
+    // Check if we're on a LinkedIn profile page
+    const isProfilePage = window.location.href.includes('linkedin.com/in/');
+    sendResponse({ isProfilePage });
+  } else if (request.action === "scrapeVCPartner") {
+    // Scrape VC Partner information from LinkedIn profile page
+    const vcPartnerInfo = scrapeVCPartnerInfo();
+    sendResponse({ vcPartnerInfo });
   }
   return true; // Keep the message channel open for async response
 });
@@ -693,5 +701,87 @@ function extractProfilesByText(profiles) {
     }
   } catch (e) {
     console.error('Error in text extraction fallback:', e);
+  }
+}
+
+/**
+ * Function to scrape VC Partner information from LinkedIn profile page
+ * @returns {Object} VC Partner information
+ */
+function scrapeVCPartnerInfo() {
+  try {
+    let fullName = '';
+    let company = '';
+    let title = '';
+    let linkedInURL = window.location.href;
+    
+    // Extract name from document title
+    if (document.title) {
+      // Remove leading (number) if present, then split on the pipe character to get just the name part
+      fullName = document.title.split('|')[0].replace(/^\(\d+\)\s*/, '').trim();
+    }
+    
+    // Extract current company
+    try {
+      company = document.querySelectorAll('a[data-field="experience_company_logo"].full-width > span span.visually-hidden')[0].textContent.trim();
+    } catch (e) {
+      console.log('Error extracting company:', e);
+      
+      // Alternate method to extract company
+      try {
+        const experienceSection = document.querySelector('section#experience');
+        if (experienceSection) {
+          const firstPosition = experienceSection.querySelector('li');
+          if (firstPosition) {
+            const companyElement = firstPosition.querySelector('span.t-14.t-normal:not(.t-black--light)');
+            if (companyElement) {
+              company = companyElement.textContent.trim();
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.log('Error in company fallback extraction:', fallbackError);
+      }
+    }
+    
+    // Extract current title
+    try {
+      title = document.querySelectorAll('a[data-field="experience_company_logo"].full-width > div span.visually-hidden')[0].textContent.trim();
+    } catch (e) {
+      console.log('Error extracting title:', e);
+      
+      // Alternate method to extract title
+      try {
+        const experienceSection = document.querySelector('section#experience');
+        if (experienceSection) {
+          const firstPosition = experienceSection.querySelector('li');
+          if (firstPosition) {
+            const titleElement = firstPosition.querySelector('span.t-bold span');
+            if (titleElement) {
+              title = titleElement.textContent.trim();
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.log('Error in title fallback extraction:', fallbackError);
+      }
+    }
+    
+    return {
+      fullName,
+      company,
+      title,
+      linkedInURL,
+      isOnLinkedInProfile: true
+    };
+  } catch (error) {
+    console.error("Error scraping VC Partner info:", error);
+    return {
+      fullName: '',
+      company: '',
+      title: '',
+      linkedInURL: window.location.href,
+      isOnLinkedInProfile: true
+    };
   }
 }
