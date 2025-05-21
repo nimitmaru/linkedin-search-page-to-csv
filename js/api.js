@@ -7,6 +7,45 @@ import { state } from './storage.js';
 import { getAllProfilesForCurrentSearch } from './storage.js';
 
 /**
+ * Prepares Airtable data in the standard format
+ * Used by both exportDataToAPI and clipboard export functions
+ * 
+ * @return {Object} Formatted data for Airtable
+ */
+function prepareAirtableData() {
+  // Get all profiles
+  const allProfiles = getAllProfilesForCurrentSearch();
+  
+  if (allProfiles.length === 0) {
+    return null;
+  }
+  
+  // Ensure closeness index is properly set for all profiles
+  const profilesWithCloseness = allProfiles.map(profile => ({
+    ...profile,
+    closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
+  }));
+  
+  // Prepare data in the standard Airtable format
+  const airtableData = {
+    partnerInfo: {
+      linkedInURL: state.partnerInfo.linkedInURL || '',
+      fullName: state.partnerInfo.fullName || '',
+      title: state.partnerInfo.title || '',
+      firmName: state.partnerInfo.company || ''
+    },
+    contacts: profilesWithCloseness.map(profile => ({
+      fullName: profile.name || '',
+      linkedInURL: profile.url || '',
+      title: profile.title || '',
+      closenessIndex: profile.closenessIndex
+    }))
+  };
+  
+  return airtableData;
+}
+
+/**
  * Function to export data to API
  * Sends selected profiles along with VC partner information to the API
  */
@@ -22,28 +61,13 @@ function exportDataToAPI() {
     return;
   }
   
-  // Get all profiles
-  const allProfiles = getAllProfilesForCurrentSearch();
+  // Get formatted data
+  const apiData = prepareAirtableData();
   
-  if (allProfiles.length === 0) {
+  if (!apiData) {
     showToast('No profiles found to export');
     return;
   }
-  
-  // Prepare data for API
-  const apiData = {
-    partnerInfo: {
-      linkedInURL: state.partnerInfo.linkedInURL,
-      fullName: state.partnerInfo.fullName || '',
-      title: state.partnerInfo.title || ''
-    },
-    contacts: allProfiles.map(profile => ({
-      fullName: profile.name || '',
-      linkedInURL: profile.url || '',
-      title: profile.title || '',
-      closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
-    }))
-  };
   
   // Show loading state
   exportApiButton.disabled = true;
@@ -80,5 +104,6 @@ function exportDataToAPI() {
 
 // Export API functions
 export {
+  prepareAirtableData,
   exportDataToAPI
 };

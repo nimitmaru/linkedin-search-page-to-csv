@@ -6,7 +6,7 @@ import { showToast } from './utils.js';
 import { state, saveProfilesToStorage, updateAppendMode, clearStoredProfiles, clearAllStoredProfiles } from './storage.js';
 import { displayResults, updateExportButtonsState, updatePartnerInfoDisplay } from './ui.js';
 import { convertToCSV } from './profiles.js';
-import { exportDataToAPI } from './api.js';
+import { exportDataToAPI, prepareAirtableData } from './api.js';
 
 /**
  * Function to extract data from LinkedIn
@@ -320,34 +320,34 @@ function handleExportCSV() {
 }
 
 /**
- * Function to handle copying CSV to clipboard
+ * Function to handle copying JSON to clipboard
  */
 function handleCopyToClipboard() {
-  // Get profiles from storage
-  import('./storage.js').then(module => {
-    const allProfiles = module.getAllProfilesForCurrentSearch();
-    
-    if (allProfiles.length === 0) {
-      showToast('No profiles found to copy');
-      return;
-    }
-    
-    // Ensure closeness index is properly set for all profiles
-    const profilesWithCloseness = allProfiles.map(profile => ({
-      ...profile,
-      closenessIndex: profile.closenessIndex !== undefined ? profile.closenessIndex : 1
-    }));
-    
-    // Convert data to CSV, including closeness index and VC Partner info
-    const csvContent = convertToCSV(profilesWithCloseness, state.partnerInfo);
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(csvContent).then(function() {
-      showToast('Copied to clipboard');
-    }, function(err) {
-      console.error('Could not copy text: ', err);
-      showToast('Failed to copy to clipboard');
-    });
+  // First check if partner info is available
+  if (!state.partnerInfo.linkedInURL) {
+    showToast('Please select a VC partner first');
+    // Trigger partner info prompt
+    document.dispatchEvent(new CustomEvent('promptPartnerInfo'));
+    return;
+  }
+
+  // Get formatted data from shared function
+  const airtableData = prepareAirtableData();
+  
+  if (!airtableData) {
+    showToast('No profiles found to copy');
+    return;
+  }
+  
+  // Convert to formatted JSON string with indentation
+  const jsonContent = JSON.stringify(airtableData, null, 2);
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(jsonContent).then(function() {
+    showToast('JSON copied to clipboard');
+  }, function(err) {
+    console.error('Could not copy text: ', err);
+    showToast('Failed to copy to clipboard');
   });
 }
 
