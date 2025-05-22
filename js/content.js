@@ -1,3 +1,6 @@
+// Add console log to verify content script is loaded
+console.log('LinkedIn content script loaded on:', window.location.href);
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "extract") {

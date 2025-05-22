@@ -30,18 +30,36 @@ function extractLinkedInData() {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     const activeTab = tabs[0];
     
-    // Check if we're on a LinkedIn search page
-    if (!activeTab.url.includes('linkedin.com/search/results')) {
-      statusDiv.textContent = 'Error: Please navigate to a LinkedIn search results page';
-      resultsDiv.innerHTML = '<p class="instructions">This extension only works on LinkedIn search results pages.</p>';
+    // Check if we're on a supported LinkedIn page
+    const isSearchPage = activeTab.url.includes('linkedin.com/search/results');
+    const isProfilePage = activeTab.url.includes('linkedin.com/in/');
+    
+    if (!isSearchPage && !isProfilePage) {
+      statusDiv.textContent = 'Error: Please navigate to a LinkedIn search results or profile page';
+      resultsDiv.innerHTML = '<p class="instructions">This extension works on LinkedIn search results and profile pages.</p>';
       return;
     }
     
     // Execute content script to extract data
     chrome.tabs.sendMessage(activeTab.id, {action: "extract"}, function(response) {
       if (chrome.runtime.lastError) {
-        statusDiv.textContent = 'Error: ' + chrome.runtime.lastError.message;
-        resultsDiv.innerHTML = '<p class="instructions">An error occurred. Try refreshing the page and opening the extension again.</p>';
+        console.error('Content script error:', chrome.runtime.lastError.message);
+        console.error('Current URL:', activeTab.url);
+        console.error('Tab ID:', activeTab.id);
+        
+        let errorMsg = chrome.runtime.lastError.message;
+        let instructions = '';
+        
+        if (errorMsg.includes('Could not establish connection')) {
+          instructions = '<p class="instructions"><strong>Content script not loaded.</strong><br>1. Refresh the LinkedIn page<br>2. Wait for it to fully load<br>3. Try opening the extension again</p>';
+        } else if (errorMsg.includes('Receiving end does not exist')) {
+          instructions = '<p class="instructions"><strong>Extension disconnected.</strong><br>Try refreshing the page or reloading the extension.</p>';
+        } else {
+          instructions = '<p class="instructions">An error occurred. Try refreshing the page and opening the extension again.</p>';
+        }
+        
+        statusDiv.textContent = 'Error: ' + errorMsg;
+        resultsDiv.innerHTML = instructions;
         return;
       }
       

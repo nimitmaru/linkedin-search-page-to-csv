@@ -18,9 +18,12 @@
     {
       "matches": [
         "https://*.linkedin.com/search/results/*",
-        "https://*.linkedin.com/in/*"
+        "https://*.linkedin.com/in/*",
+        "https://*.linkedin.com/*"
       ],
-      "js": ["js/linkedin-extractor.js", "js/screenshot-parser.js", "js/content.js"]
+      "js": ["js/linkedin-extractor.js", "js/screenshot-parser.js", "js/content.js"],
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "web_accessible_resources": [
