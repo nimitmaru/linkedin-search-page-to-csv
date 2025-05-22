@@ -3,7 +3,7 @@
  * This file initializes the UI and sets up all the event handlers
  */
 
-import { loadStoredProfiles, loadPartnerInfoFromStorage } from './storage.js';
+import { loadStoredProfiles, loadPartnerInfoFromStorage, loadDevModeFromStorage, state } from './storage.js';
 import { displayResults, updatePartnerInfoDisplay, updateExportButtonsState } from './ui.js';
 import { extractLinkedInData, setupEventListeners } from './events.js';
 
@@ -22,16 +22,25 @@ document.addEventListener('DOMContentLoaded', function() {
     onPartnerInfoLoaded: updatePartnerInfoDisplay
   };
   
-  // First load the VC partner info to ensure it's available
-  loadPartnerInfoFromStorage(() => {
-    console.log('loadPartnerInfoFromStorage callback');
-    // After partner info is loaded, load the profiles data
-    // This ensures proper sequence and that partner info is available
-    // when processing the search context and profiles
-    loadStoredProfiles(storageCallbacks);
+  // Load dev mode first, then partner info, then profiles
+  loadDevModeFromStorage(() => {
+    // Update the dev mode toggle to match the stored state
+    const devModeToggle = document.getElementById('dev-mode');
+    if (devModeToggle) {
+      devModeToggle.checked = state.devMode;
+    }
     
-    // Make sure the UI correctly shows the partner info
-    updatePartnerInfoDisplay();
+    // Then load VC partner info
+    loadPartnerInfoFromStorage(() => {
+      console.log('loadPartnerInfoFromStorage callback');
+      // After partner info is loaded, load the profiles data
+      // This ensures proper sequence and that partner info is available
+      // when processing the search context and profiles
+      loadStoredProfiles(storageCallbacks);
+      
+      // Make sure the UI correctly shows the partner info
+      updatePartnerInfoDisplay();
+    });
   });
   
   // Extract data from LinkedIn

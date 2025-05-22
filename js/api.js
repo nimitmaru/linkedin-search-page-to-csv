@@ -69,12 +69,19 @@ function exportDataToAPI() {
     return;
   }
   
+  // Determine API endpoint based on dev mode
+  const apiUrl = state.devMode 
+    ? 'http://localhost:3000/api/airtable'
+    : 'https://flywithkite.com/api/airtable';
+  
+  console.log(`Sending to ${state.devMode ? 'DEV' : 'PROD'} API:`, apiUrl);
+  
   // Show loading state
   exportApiButton.disabled = true;
   exportApiButton.textContent = 'Sending...';
   
   // Make API call
-  fetch('https://flywithkite.com/api/exportToAirtable', {
+  fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -88,7 +95,7 @@ function exportDataToAPI() {
     return response.json();
   })
   .then(data => {
-    showToast('Data exported successfully!');
+    showToast(`Data exported successfully to ${state.devMode ? 'DEV' : 'PROD'}!`);
     console.log('API response:', data);
   })
   .catch(error => {

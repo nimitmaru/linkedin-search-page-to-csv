@@ -3,7 +3,7 @@
  */
 
 import { showToast } from './utils.js';
-import { state, saveProfilesToStorage, updateAppendMode, clearStoredProfiles, clearAllStoredProfiles } from './storage.js';
+import { state, saveProfilesToStorage, updateAppendMode, updateDevMode, clearStoredProfiles, clearAllStoredProfiles } from './storage.js';
 import { displayResults, updateExportButtonsState, updatePartnerInfoDisplay } from './ui.js';
 import { convertToCSV } from './profiles.js';
 import { exportDataToAPI, prepareAirtableData } from './api.js';
@@ -467,6 +467,35 @@ function setupEventListeners() {
       showToast('Append mode disabled');
     }
   });
+  
+  // Handler for dev mode toggle
+  const devModeToggle = document.getElementById('dev-mode');
+  const devToggleSwitch = document.querySelector('.dev-toggle-switch');
+  const devToggleContainer = document.querySelector('.dev-toggle');
+  
+  if (devModeToggle) {
+    // Handle checkbox change
+    devModeToggle.addEventListener('change', function() {
+      updateDevMode(this.checked);
+      showToast(`Dev mode ${this.checked ? 'enabled' : 'disabled'}`);
+    });
+    
+    // Handle click on the toggle switch itself
+    if (devToggleSwitch) {
+      devToggleSwitch.addEventListener('click', function() {
+        devModeToggle.checked = !devModeToggle.checked;
+        devModeToggle.dispatchEvent(new Event('change'));
+      });
+    }
+    
+    // Handle click on the entire toggle container
+    if (devToggleContainer) {
+      devToggleContainer.addEventListener('click', function() {
+        devModeToggle.checked = !devModeToggle.checked;
+        devModeToggle.dispatchEvent(new Event('change'));
+      });
+    }
+  }
   
 }
 

@@ -6,7 +6,14 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>LinkedIn Mutual Contacts</h1>
+    <div class="header-top">
+      <h1>LinkedIn Mutual Contacts</h1>
+      <div class="dev-toggle">
+        <label for="dev-mode" class="dev-toggle-label">Dev?</label>
+        <input type="checkbox" id="dev-mode" class="dev-toggle-checkbox" checked>
+        <span class="dev-toggle-switch"></span>
+      </div>
+    </div>
     <div class="controls">
       <button id="refresh" title="Refresh extraction">
         <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

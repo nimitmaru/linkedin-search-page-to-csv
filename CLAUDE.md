@@ -83,6 +83,7 @@ When modifying selectors, update all extraction methods to ensure the extension 
 
 ## Important Notes
 
+0. Don't include "status update" type comments, e.g.: "// Keep this if used elsewhere for just partner info." Use comments only in places where there is truly complexity and a comment is needed to explain it.
 1. The extension uses multiple extraction methods as fallbacks in case LinkedIn changes their DOM structure.
 2. When updating selectors, check all extraction methods to ensure consistent data extraction.
 3. The extension handles pagination by storing data in Chrome's local storage and combining it with new extractions.

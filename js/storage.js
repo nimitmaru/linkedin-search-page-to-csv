@@ -18,7 +18,8 @@ const state = {
     title: '',
     company: '',
     isOnLinkedInProfile: false
-  }
+  },
+  devMode: true // Default to dev mode ON
 };
 
 /**
@@ -396,7 +397,30 @@ function updateAppendMode(isAppendMode) {
   chrome.storage.local.set({ appendMode: state.isAppendMode });
 }
 
-// Export storage functions and state
+/**
+ * Updates the dev mode setting
+ * @param {boolean} isDevMode - Whether dev mode is enabled
+ */
+function updateDevMode(isDevMode) {
+  state.devMode = isDevMode;
+  chrome.storage.local.set({ devMode: state.devMode });
+}
+
+/**
+ * Function to load dev mode from storage
+ * @param {Function} onDevModeLoaded - Callback to be called when dev mode is loaded
+ */
+function loadDevModeFromStorage(onDevModeLoaded) {
+  chrome.storage.local.get('devMode', function(result) {
+    if (result.devMode !== undefined) {
+      state.devMode = result.devMode;
+    }
+    if (onDevModeLoaded) {
+      onDevModeLoaded();
+    }
+  });
+}
+
 export {
   state,
   loadStoredProfiles,
@@ -406,5 +430,7 @@ export {
   getAllProfilesForCurrentSearch,
   savePartnerInfoToStorage,
   loadPartnerInfoFromStorage,
-  updateAppendMode
+  updateAppendMode,
+  updateDevMode,
+  loadDevModeFromStorage
 };

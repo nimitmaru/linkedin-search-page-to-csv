@@ -16,6 +16,63 @@ body {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Dev toggle styles */
+.dev-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.dev-toggle-label {
+  font-size: 12px;
+  color: white;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dev-toggle-checkbox {
+  display: none;
+}
+
+.dev-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  background-color: #34c759;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.dev-toggle-switch::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  transform: translateX(20px);
+}
+
+.dev-toggle-checkbox:not(:checked) + .dev-toggle-switch {
+  background-color: #8e8e93;
+}
+
+.dev-toggle-checkbox:not(:checked) + .dev-toggle-switch::before {
+  transform: translateX(0);
+}
+
 h1 {
   font-size: 18px;
   margin: 0;
